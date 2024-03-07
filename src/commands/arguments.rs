@@ -12,21 +12,18 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    Source(Action),
-    Target(Action),
-    Pair(Action),
-    Scan,
+    Add(SubArgs),
+    Del(DelArgs),
     Move(Keyword),
+    Scan,
     List,
 }
 
 #[derive(Debug, Args)]
-pub struct Action {
-    #[command(subcommand)]
-    pub action: Actions,
-    pub path: Utf8PathBuf,
+pub struct SubArgs {
     pub keyword: String,
-    pub opt_path: Option<Utf8PathBuf>,
+    pub source_path: Utf8PathBuf,
+    pub target_path: Utf8PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -34,11 +31,10 @@ pub struct Keyword {
     pub keyword: String,
 }
 
-#[derive(Subcommand, Debug, Clone)]
-pub enum Actions {
-    Add,
-    Delete,
-    List,
+#[derive(Debug, Args)]
+pub struct DelArgs {
+    pub keyword: Option<String>,
+    pub target_path: Option<Utf8PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -48,10 +44,8 @@ pub struct SymlinkInfo {
 }
 
 impl Cli {
-    pub fn get_subarg(&self) -> Option<&Action> {
-        if let Commands::Source(subargs) | Commands::Target(subargs) | Commands::Pair(subargs) =
-            &self.command
-        {
+    pub fn get_subarg(&self) -> Option<&SubArgs> {
+        if let Commands::Add(subargs) = &self.command {
             Some(subargs)
         } else {
             None
@@ -61,15 +55,15 @@ impl Cli {
         self.get_subarg().map(|subargs| subargs.keyword.as_str())
     }
 
-    pub fn get_dir(&self) -> Option<&Utf8PathBuf> {
-        self.get_subarg().map(|subargs| &subargs.path)
+    pub fn get_source_path(&self) -> Option<&Utf8PathBuf> {
+        self.get_subarg().map(|subargs| &subargs.source_path)
     }
 
-    pub fn get_opt_path(&self) -> Option<&Option<Utf8PathBuf>> {
-        self.get_subarg().map(|subargs| &subargs.opt_path)
+    pub fn get_target_path(&self) -> Option<&Utf8PathBuf> {
+        self.get_subarg().map(|subargs| &subargs.target_path)
     }
 
-    pub fn get_action(&self) -> Option<&Actions> {
-        self.get_subarg().map(|subargs| &subargs.action)
-    }
+    // pub fn get_action(&self) -> Option<&Actions> {
+    //     self.get_subarg().map(|subargs| &subargs.action)
+    // }
 }
