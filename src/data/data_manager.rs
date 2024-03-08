@@ -7,7 +7,7 @@ use crate::{
     data::{json_manager, model::DataModel},
     Args,
 };
-use serde::{Deserialize, Serialize};
+use serde::{ser::Error, Deserialize, Serialize};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use colored::*;
@@ -15,19 +15,18 @@ use regex::Regex;
 use serde_json::{from_str, Value};
 use std::{
     collections::HashSet,
-    error::Error,
     fs::{self, File, OpenOptions},
     io::{self, prelude::*, BufReader, BufWriter},
     path::{Path, PathBuf},
 };
 use unicode_normalization::UnicodeNormalization;
 
-pub struct DataManager {
-    // model: Box<dyn DataModelTrait>,
-    // model: DataModel,
-    paths: HashSet<String>,
-    data_file: String,
-}
+pub struct DataManager;
+// pub struct DataManager {
+// model: Box<dyn DataModelTrait>,
+// model: DataModel,
+// data: HashSet<String>,
+// }
 
 pub enum DataAction {
     Add,
@@ -43,79 +42,59 @@ pub enum DataAction {
 
 impl DataManager {
     pub fn new() -> Self {
-        // let data_file = "data.json";
-        // let data_manager = DataManager::new();
-        // let model = DataModel::new(&data_manager);
-        // let paths = DataManager::load_data_file(data_file);
-        let paths = HashSet::new();
-        DataManager {
-            paths,
-            data_file: "data.json".to_string(),
+        // let data = load_data_file();
+        // DataManager { data }
+        DataManager
+        // let paths = HashSet::new();
+    }
+    pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> std::io::Result<()> {
+        println!("{:?}", args);
+        match action {
+            DataAction::Add => {
+                let source_data = std::fs::read_to_string(&args.source_path)?;
+
+                self.add_new_rule(&args.keyword, &args.source_path, &args.target_path)?;
+            }
+            DataAction::Delete => {
+                self.delete_from(args.target_path.to_owned(), args.keyword.as_str())?
+            }
+            DataAction::Read => {
+                self.scan_path(args.source_path);
+            }
+            DataAction::Move => {
+                let data_manager = DataManager::new();
+                self.move_dirs(&args.keyword)?;
+            }
+            DataAction::Copy => {
+                self.add_new_rule(&args.keyword, args.source_path, args.target_path);
+            }
+            _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
         }
-    }
-
-    pub fn parse_json_data<T: for<'b> Deserialize<'b>>(
-        &self,
-        file_path: &str,
-    ) -> Result<T, io::Error> {
-        let file = File::open(file_path)?;
-        let data = serde_json::from_reader(file)?;
-        Ok(data)
-    }
-
-    pub fn save_json_data<T: Serialize>(&self, file_path: &str, data: &T) -> Result<(), io::Error> {
-        let json = serde_json::to_vec_pretty(data)?;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(file_path)?;
-        file.write_all(&json)?;
         Ok(())
     }
 
-    pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> std::io::Result<()> {
-        // let keyword = config.get_keyword().unwrap_or("");
-        // let source_path = config.get_source_path();
-        // let target_path = config.get_target_path();
-        let model = DataModel::new(&self);
-        // let data_manager = DataManager::new("data.json");
-        println!("{:?}", args);
-        // match action {
-        //     DataAction::Add => {
-        //         let source_data = std::fs::read_to_string(&args.source_path)?;
-        //         self.add_new_rule(&args.keyword, &args.source_path, &args.target_path)?;
-        //         println!(
-        //             "Data added from {:?} to {:?}",
-        //             args.source_path, args.target_path
-        //         );
-        //     }
-        //     DataAction::Delete => self.delete_from(
-        //         args.target_path
-        //             .as_ref()
-        //             .map(|p| p.to_owned())
-        //             .unwrap_or_else(Utf8PathBuf::new)
-        //             .to_owned(),
-        //         args.keyword.as_deref().unwrap(),
-        //     )?,
-        //     DataAction::Read => {
-        //         self.scan_path(args.get_source_path().unwrap());
-        //     }
-        //     DataAction::Move => {
-        //         let data_manager = DataManager::new();
-
-        //         // let data_manager = DataManager::new(fwq);
-        //         self.move_dirs(model, &args.keyword)?;
-        //     }
-        //     DataAction::Copy => {
-        //         let data = self.load_data_file();
-        //         self.add_new_rule(
-        //             &args.keyword,
-        //             args.source_path.unwrap(),
-        //             args.target_path.unwrap(),
-        //         );
-        //     }
-        //     _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
-        // }
+    // pub fn parse_json_data<DataModel: for<'b> Deserialize<'b>>(&self,) -> Result<Vec<DataModel>, serde_json::Error> {
+    pub fn parse_json_data(&self) -> Result<DataModel, serde_json::Error> {
+        match File::open("./data.json") {
+            Ok(mut file) => {
+                let mut data = String::new();
+                file.read_to_string(&mut data);
+                serde_json::from_str(&data)
+            }
+            Err(e) => Err(serde_json::Error::custom(format!(
+                "failed to load data file: {}",
+                e
+            ))),
+        }
+    }
+    pub fn save_json_data<T: Serialize>(&self) -> Result<(), io::Error> {
+        let data = load_data_file();
+        let json = serde_json::to_vec_pretty(&data)?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open("./json.data")?;
+        file.write_all(&json)?;
         Ok(())
     }
 
@@ -127,14 +106,20 @@ impl DataManager {
     ) -> io::Result<()> {
         // self.print_rule_info("add", &cli)?;
 
+        let mut data = DataModel::new(self);
+        let new_rule: DataModel;
+
         if Utf8PathBuf::from(source_path).exists() {
             if menu::get_yn_input() {
-                // if let Err(err) =
-                //     create_json(source_path.to_string(), target_path.to_string(), keyword)
-                // {
-                // eprintln!("Failed to create data file: {}", err);
-                // return Err(err.into());
-                // }
+                if let Err(err) = DataModel::add_source_target(
+                    &mut data,
+                    source_path.as_str(),
+                    target_path.as_str(),
+                    keyword,
+                ) {
+                    eprintln!("Failed to create data file: {}", err);
+                    return Err(err.into());
+                }
             }
 
             println!("new rule added:");
@@ -142,6 +127,7 @@ impl DataManager {
                 "items that has keyword \x1b[4m{:?}\x1b[0m will be moved",
                 keyword
             );
+            println!("Data added from {:?} to {:?}", source_path, target_path);
             Ok(())
         } else {
             println!("No such path exists on the volume.");
@@ -151,6 +137,7 @@ impl DataManager {
             ))
         }
     }
+
     pub fn add_lst_to_json(
         data: &mut DataModel,
         source_path: &str,
@@ -222,22 +209,10 @@ impl DataManager {
         Ok(())
     }
 
-    fn load_data_file(&self) -> HashSet<String> {
-        let mut paths = HashSet::new();
-        if let Ok(file) = File::open("data.json") {
-            let reader = BufReader::new(file);
-            for line in reader.lines() {
-                if let Ok(path_str) = line {
-                    let path = String::from(path_str.trim());
-                    paths.insert(path);
-                }
-            }
-        }
-        paths
-    }
+    fn move_dirs(&self, keyword: &str) -> io::Result<()> {
+        let data: DataModel = self.parse_json_data()?;
 
-    fn move_dirs(&self, data: DataModel, keyword: &str) -> io::Result<()> {
-        // println!("{:?}", data.pairs);
+        println!("{:?}", data.pairs);
         let mut source_path = "";
         let mut target_path = "";
         let mut source_pathbuf = Utf8PathBuf::new();
@@ -325,4 +300,18 @@ impl DataManager {
     // }
 
     fn scan_path(&mut self, path: &Utf8PathBuf) {}
+}
+
+pub fn load_data_file() -> HashSet<String> {
+    let mut paths = HashSet::new();
+    if let Ok(file) = File::open("data.json") {
+        let reader = BufReader::new(file);
+        for line in reader.lines() {
+            if let Ok(path_str) = line {
+                let path = String::from(path_str.trim());
+                paths.insert(path);
+            }
+        }
+    }
+    paths
 }

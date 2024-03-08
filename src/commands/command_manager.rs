@@ -14,8 +14,8 @@ use std::{
 };
 
 pub fn process_command(config: &Config) -> Result<()> {
-    let mut data_manager = DataManager::new();
     let mut action;
+    let mut data_manager = DataManager;
 
     match &config.command {
         Commands::Add {
@@ -29,19 +29,20 @@ pub fn process_command(config: &Config) -> Result<()> {
                 target_path,
             };
             action = DataAction::Add;
-            data_manager.match_action(action, sub_args)
+            DataManager::match_action(&mut data_manager, DataAction::Add, sub_args)
         }
 
         Commands::Del {
             keyword,
             target_path,
         } => {
+            let default_path = Utf8PathBuf::default();
             let sub_args = &SubArgs {
                 keyword: keyword.as_deref().unwrap_or("").to_string(),
                 source_path: &Utf8PathBuf::default(),
-                target_path: target_path.as_ref().unwrap(),
+                target_path: &target_path.as_ref().unwrap_or(&default_path),
             };
-            data_manager.match_action(DataAction::Delete, &sub_args)
+            DataManager::match_action(&mut data_manager, DataAction::Delete, &sub_args)
         }
         Commands::Move { keyword } => {
             let sub_args = &SubArgs {
@@ -49,7 +50,7 @@ pub fn process_command(config: &Config) -> Result<()> {
                 source_path: &Utf8PathBuf::default(),
                 target_path: &Utf8PathBuf::default(),
             };
-            data_manager.match_action(DataAction::Move, &sub_args)
+            DataManager::match_action(&mut data_manager, DataAction::Move, &sub_args)
         }
         //
         Commands::Scan {} => Ok(()),

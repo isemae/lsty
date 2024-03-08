@@ -37,6 +37,7 @@ pub struct Target {
     pub keyword: String,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct DataModel {
     // pub data_manager: &'a data_manager::DataManager<'a>,
     pub pairs: Vec<Pair>,
@@ -44,8 +45,10 @@ pub struct DataModel {
 
 impl DataModel {
     pub fn new(data_manager: &DataManager) -> Self {
-        let pairs =
-            DataManager::parse_json_data(data_manager, "data.json").unwrap_or_else(|_| Vec::new());
+        let pairs = data_manager
+            .parse_json_data()
+            .unwrap_or_else(|_| DataModel { pairs: Vec::new() })
+            .pairs;
         DataModel { pairs }
     }
 
@@ -55,6 +58,8 @@ impl DataModel {
         target_path: &str,
         keyword: &str,
     ) -> Result<(), std::io::Error> {
+        let data_manager: DataManager;
+
         if let Some(pair) = self
             .pairs
             .iter_mut()
@@ -80,10 +85,10 @@ impl DataModel {
             };
             self.pairs.push(new_pair);
         }
-        // self.pairs;
-        // DataManager::save_json_data(&self, "data.json", &self.pairs)
+
+        // DataManager::save_json_data(&data_manager)
         // .save_json_data("data.json", &self.pairs)
-        // .map_err(|e| e)
+        // .map_err(|e| e);
         Ok(())
     }
 }
