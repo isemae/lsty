@@ -12,7 +12,6 @@ pub struct Config {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    #[command(short = "a")]
     Add {
         keyword: String,
         source_path: Utf8PathBuf,

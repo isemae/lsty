@@ -1,6 +1,6 @@
 use camino::Utf8PathBuf;
 
-use super::arguments::{Commands, Config, CopyArg, DelArgs, SubArgs};
+use super::arguments::{Commands, Config, SubArgs};
 use crate::{
     cli::menu::{navigate_menu, MenuAction},
     data::{
