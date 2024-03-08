@@ -1,40 +1,44 @@
 use camino::Utf8PathBuf;
-use clap::{builder, ArgGroup, Args, Parser, Subcommand, ValueEnum};
+use clap::{builder, ArgGroup, Args, Command, Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
-pub struct Cli {
+pub struct Config {
     #[command(subcommand)]
     pub command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    Add(SubArgs),
-    Del(DelArgs),
-    Move(Keyword),
+    #[command(short = "a")]
+    Add {
+        keyword: String,
+        source_path: Utf8PathBuf,
+        target_path: Utf8PathBuf,
+    },
+    Del {
+        #[arg(value_name = "KEYWORD", required_unless_present = "target_path")]
+        keyword: Option<String>,
+        #[arg(value_name = "PATH", required_unless_present = "keyword")]
+        target_path: Option<Utf8PathBuf>,
+    },
+    Move {
+        keyword: String,
+    },
     Scan,
+    Copy {
+        source_path: Utf8PathBuf,
+    },
     List,
 }
 
-#[derive(Debug, Args)]
-pub struct SubArgs {
+#[derive(Debug)]
+pub struct SubArgs<'a> {
     pub keyword: String,
-    pub source_path: Utf8PathBuf,
-    pub target_path: Utf8PathBuf,
-}
-
-#[derive(Debug, Args)]
-pub struct Keyword {
-    pub keyword: String,
-}
-
-#[derive(Debug, Args)]
-pub struct DelArgs {
-    pub keyword: Option<String>,
-    pub target_path: Option<Utf8PathBuf>,
+    pub source_path: &'a Utf8PathBuf,
+    pub target_path: &'a Utf8PathBuf,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -43,27 +47,30 @@ pub struct SymlinkInfo {
     pub link_path: String,
 }
 
-impl Cli {
-    pub fn get_subarg(&self) -> Option<&SubArgs> {
-        if let Commands::Add(subargs) = &self.command {
-            Some(subargs)
-        } else {
-            None
-        }
-    }
-    pub fn get_keyword(&self) -> Option<&str> {
-        self.get_subarg().map(|subargs| subargs.keyword.as_str())
-    }
-
-    pub fn get_source_path(&self) -> Option<&Utf8PathBuf> {
-        self.get_subarg().map(|subargs| &subargs.source_path)
-    }
-
-    pub fn get_target_path(&self) -> Option<&Utf8PathBuf> {
-        self.get_subarg().map(|subargs| &subargs.target_path)
-    }
-
-    // pub fn get_action(&self) -> Option<&Actions> {
-    //     self.get_subarg().map(|subargs| &subargs.action)
+impl Config {
+    // pub fn get_arg(&self) -> Option<&dyn Args> {
+    //     match &self.command {
+    //         Commands::Add(subargs) => Some(subargs as &dyn Args),
+    //         Commands::Del(delargs) => Some(delargs as &dyn Args),
+    //         Commands::Keyword(keyword) => Some(keyword as &dyn Args),
+    //         Commands::Copy(copy_arg) => Some(copy_arg as &dyn Args),
+    //         _ => None,
+    //     }
     // }
+
+    // pub fn get_keyword(&self) -> Option<&str> {
+    //     self.get_subarg().map(|subargs| subargs.keyword.as_str())
+    // }
+
+    // pub fn get_source_path(&self) -> Option<&Utf8PathBuf> {
+    //     self.get_subarg().map(|subargs| &subargs.source_path)
+    // }
+
+    // pub fn get_target_path(&self) -> Option<&Utf8PathBuf> {
+    //     self.get_subarg().map(|subargs| &subargs.target_path)
+    // }
+
+    // // pub fn get_action(&self) -> Option<&Actions> {
+    // //     self.get_subarg().map(|subargs| &subargs.action)
+    // // }
 }

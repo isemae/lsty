@@ -27,23 +27,22 @@ pub fn navigate_menu(action: MenuAction) {
 
     let mut stage_num = 0;
     let data_file = "./data.json";
-    let mut menu = DataModel::parse_json();
-    println!("{:?}", menu);
+    // let mut menu = DataModel::json_mamager.parse_json();
+    // println!("{:?}", menu);
     let submenu: &[&str];
 
     let default_submenu = &["[s] SCAN", "[l] LINK", "[u] UNSET"];
-    let pair_submenu = &menu
-        .targets
-        .iter()
-        .map(|target| target.target_path.as_str())
-        .collect::<Vec<&str>>();
+    // let pair_submenu = &menu
+    //     .targets
+    //     .iter()
+    //     .map(|target| target.target_path.as_str())
+    //     .collect::<Vec<&str>>();
 
     match action {
         MenuAction::Default => {
             submenu = default_submenu;
         }
-        MenuAction::Pair => submenu = pair_submenu,
-
+        // MenuAction::Pair => submenu = pair_submenu,
         _ => {
             submenu = &[""];
         }
@@ -51,7 +50,7 @@ pub fn navigate_menu(action: MenuAction) {
 
     loop {
         execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
-        print_stage(&menu, stage_num, cursor_y, cursor_x, submenu);
+        // print_stage(&menu, stage_num, cursor_y, cursor_x, submenu);
 
         if let Event::Key(event) = read().unwrap() {
             match event.code {
@@ -61,9 +60,9 @@ pub fn navigate_menu(action: MenuAction) {
                     }
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
-                    if stage_num != 1 && cursor_y < menu.pairs.len() {
-                        cursor_y += 1;
-                    }
+                    // if stage_num != 1 && cursor_y < menu.pairs.len() {
+                    cursor_y += 1;
+                    // }
                 }
                 KeyCode::Right | KeyCode::Char('l') => {
                     if cursor_x < submenu.len() - 1 {
