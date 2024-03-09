@@ -240,19 +240,27 @@ impl DataManager {
 
             // checks if source path exist
             if !target_path.is_empty() {
+                println!("");
                 if !Path::new(source_path).exists() {
                     eprintln!(
                         "\x1b[0;31m ✘ Source path {} does not exist\x1b[0m",
                         source_path.yellow()
                     );
                     continue;
+                } else {
+                    println!("SOURCE: {}", source_path.yellow());
                 }
-                println!("SOURCE: {}", source_path.yellow());
 
+                if !Path::new(target_path).exists() {
+                    eprintln!(
+                        "\x1b[0;33m⚠ target path '{}' does not exist. Creating the directory...\x1b[0m",
+                        target_path.yellow()
+                    );
+                    fs::create_dir_all(&target_path);
+                }
                 // generates regex pattern
                 let re = Regex::new(&format!(r"{}", &keyword)).unwrap();
                 let entries = fs::read_dir(source_path)?;
-
                 let mut moved_count = 0;
 
                 for entry in entries {
@@ -263,8 +271,6 @@ impl DataManager {
                         None => continue,
                     };
                     let normalized = item_name.nfc().collect::<String>();
-
-                    // checks if the normalized keyword exists in the filename and moves the file if it has the keyword
                     if re.is_match(&item_name) {
                         let new_path = format!("{}/{}", target_path, normalized);
                         if Path::new(&new_path).exists() {
@@ -273,21 +279,22 @@ impl DataManager {
                                 item_name
                             );
                             continue;
+                        } else {
+                            println!(
+                                "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
+                                item_name
+                            );
+                            fs::rename(&item_path, &new_path)?;
                         }
-
-                        println!(
-                            "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
-                            item_name
-                        );
-                        fs::rename(&item_name.as_ref(), &new_path)?;
                         moved_count += 1;
                     }
+                    // checks if the normalized keyword exists in the filename and moves the file if it has the keyword
                 }
 
+                println!("TARGET: {}", target_path.yellow());
                 if moved_count == 0 {
-                    println!("No items to move\n");
+                    println!("No items to move");
                 }
-                println!("TARGET: {} \n", target_path.yellow());
             }
         }
         Ok(())
