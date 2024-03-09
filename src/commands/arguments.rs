@@ -14,7 +14,6 @@ pub struct Config {
 pub enum Commands {
     Add {
         keyword: String,
-        source_path: Utf8PathBuf,
         target_path: Utf8PathBuf,
     },
     Del {
@@ -25,6 +24,7 @@ pub enum Commands {
     },
     Move {
         keyword: String,
+        target_path: Option<Utf8PathBuf>,
     },
     Scan,
     Copy {

@@ -9,6 +9,7 @@ use crate::{
     },
 };
 use std::{
+    default,
     io::{self, Result},
     path::{Path, PathBuf},
 };
@@ -16,16 +17,17 @@ use std::{
 pub fn process_command(config: &Config) -> Result<()> {
     let mut action;
     let mut data_manager = DataManager;
+    let current_path = std::env::current_dir().unwrap_or(PathBuf::from(""));
+    let default_path = &Utf8PathBuf::from_path_buf(current_path).unwrap_or(Utf8PathBuf::from(""));
 
     match &config.command {
         Commands::Add {
             keyword,
-            source_path,
             target_path,
         } => {
             let sub_args = &SubArgs {
                 keyword: keyword.to_string(),
-                source_path,
+                source_path: default_path,
                 target_path,
             };
             action = DataAction::Add;
@@ -39,16 +41,19 @@ pub fn process_command(config: &Config) -> Result<()> {
             let default_path = Utf8PathBuf::default();
             let sub_args = &SubArgs {
                 keyword: keyword.as_deref().unwrap_or("").to_string(),
-                source_path: &Utf8PathBuf::default(),
+                source_path: &default_path,
                 target_path: &target_path.as_ref().unwrap_or(&default_path),
             };
             DataManager::match_action(&mut data_manager, DataAction::Delete, &sub_args)
         }
-        Commands::Move { keyword } => {
+        Commands::Move {
+            keyword,
+            target_path,
+        } => {
             let sub_args = &SubArgs {
                 keyword: keyword.to_string(),
-                source_path: &Utf8PathBuf::default(),
-                target_path: &Utf8PathBuf::default(),
+                source_path: &default_path,
+                target_path: &target_path.as_ref().unwrap_or(&default_path),
             };
             DataManager::match_action(&mut data_manager, DataAction::Move, &sub_args)
         }
