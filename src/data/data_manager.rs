@@ -52,8 +52,18 @@ impl DataManager {
         // println!("{:?}", args);
         match action {
             DataAction::Add => {
+                let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel {
+                    pairs: vec![Pair {
+                        source_path: args.source_path.to_string(),
+                        source_targets: vec![SourceTarget {
+                            target: args.target_path.to_string(),
+                            keyword: args.keyword.to_string(),
+                        }],
+                    }],
+                });
                 // let source_data = std::fs::read_to_string(&args.source_path)?;
                 match self.add_rule_to_json(
+                    data,
                     args.source_path.as_str(),
                     args.target_path.as_str(),
                     &args.keyword.to_string(),
@@ -69,8 +79,24 @@ impl DataManager {
                 };
             }
             DataAction::Delete => {
-                // self.delete_from(args.target_path.to_owned(), args.keyword.as_str())?
-                self.remove_rule_from_json(args.keyword.as_str())?
+                let mut data = self.load_data_file()?;
+
+                if args.keyword.is_empty() {
+                    println!("delmenu")
+                } else {
+                    println!("{}", args.source_path.as_str());
+                    match self.remove_rule_from_json(
+                        data,
+                        args.source_path.as_str(),
+                        args.keyword.as_str(),
+                    ) {
+                        Ok(()) => println!("rule deleted successfully"),
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            process::exit(1);
+                        }
+                    }
+                }
             }
             DataAction::Read => {
                 self.scan_path(args.source_path);
@@ -155,6 +181,7 @@ impl DataManager {
 
     pub fn add_rule_to_json(
         &self,
+        mut data: DataModel,
         source_path: &str,
         target_path: &str,
         keyword: &str,
@@ -166,16 +193,6 @@ impl DataManager {
                 "no such directory exists.",
             ));
         }
-
-        let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel {
-            pairs: vec![Pair {
-                source_path: source_path.to_string(),
-                source_targets: vec![SourceTarget {
-                    target: target_path.to_string(),
-                    keyword: keyword.to_string(),
-                }],
-            }],
-        });
 
         if let Some(pair) = data
             .pairs
@@ -207,25 +224,69 @@ impl DataManager {
         Ok(())
     }
 
-    fn remove_rule_from_json(&self, keyword: &str) -> std::io::Result<()> {
-        let file = File::open("data.json")?;
-        let mut data: serde_json::Value = serde_json::from_reader(file)?;
+    fn remove_rule_from_json(
+        &self,
+        mut data: Value,
+        source_path: &str,
+        keyword: &str,
+    ) -> Result<(), io::Error> {
+        let mut should_write = false;
 
-        if menu::get_yn_input() {
-            if let Some(pairs) = data.get_mut("pairs").and_then(|p| p.as_array_mut()) {
-                for pair in pairs.iter_mut() {
-                    if let Some(targets) = pair
-                        .get_mut("source_targets")
-                        .and_then(|t| t.as_array_mut())
-                    {
-                        targets.retain(|t| t["keyword"] != Value::String(keyword.to_string()))
+        if let Some(pairs) = data.get_mut("pairs").and_then(|p| p.as_array_mut()) {
+            let mut index_to_remove = None;
+
+            for (index, pair) in pairs.iter_mut().enumerate() {
+                if let Some(source) = pair.get_mut("source_path").and_then(|s| s.as_str()) {
+                    if source == source_path {
+                        if let Some(targets) = pair
+                            .get_mut("source_targets")
+                            .and_then(|t| t.as_array_mut())
+                        {
+                            // keyword validation
+                            let keyword_exists = targets.iter().any(|t| {
+                                t.get("keyword")
+                                    .and_then(|k| k.as_str())
+                                    .map(|k| k == keyword)
+                                    .unwrap_or(false)
+                            });
+                            if !keyword_exists {
+                                return Err(io::Error::new(
+                                    io::ErrorKind::InvalidInput,
+                                    "no such keyword rule for the current path",
+                                ));
+                            }
+
+                            targets.retain(|t| t["keyword"] != Value::String(keyword.to_string()));
+                            should_write = true;
+                            break;
+                        }
+                    } else if pair["source_targets"].as_array().unwrap().is_empty() {
+                        index_to_remove = Some(index);
                     }
                 }
             }
-            let mut file = File::create("data.json")?;
-            serde_json::to_writer_pretty(&mut file, &data)?;
+            if let Some(index) = index_to_remove {
+                pairs.remove(index);
+                should_write = true;
+            }
+
+            if should_write && menu::get_yn_input() {
+                let mut file = File::create("data.json")?;
+                serde_json::to_writer_pretty(&mut file, &data)?;
+            }
         }
         Ok(())
+    }
+
+    pub fn load_data_file(&self) -> Result<Value, io::Error> {
+        let file = File::open("data.json")?;
+        let mut buffer = String::new();
+        let mut reader = io::BufReader::new(file);
+        reader.read_to_string(&mut buffer)?;
+
+        let data: Value = serde_json::from_str(&buffer)?;
+
+        Ok(data)
     }
 
     fn move_dirs(&self, keyword: &str) -> io::Result<()> {
@@ -240,7 +301,7 @@ impl DataManager {
                 .map(|target| target.target.as_str())
                 .unwrap_or("");
 
-            // checks if source path exist
+            // checks if source path exists
             if !target_path.is_empty() {
                 println!("");
                 if !Path::new(source_path).exists() {

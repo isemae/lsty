@@ -17,7 +17,7 @@ use std::{
 pub fn process_command(config: &Config) -> Result<()> {
     let mut action;
     let mut data_manager = DataManager;
-    let current_path = std::env::current_dir().unwrap_or(PathBuf::from(""));
+    let mut current_path = std::env::current_dir().unwrap_or(PathBuf::from(""));
     let default_path = &Utf8PathBuf::from_path_buf(current_path).unwrap_or(Utf8PathBuf::from(""));
 
     match &config.command {
@@ -27,7 +27,7 @@ pub fn process_command(config: &Config) -> Result<()> {
         } => {
             let sub_args = &SubArgs {
                 keyword: keyword.to_string(),
-                source_path: default_path,
+                source_path: &default_path,
                 target_path,
             };
             action = DataAction::Add;
@@ -36,13 +36,13 @@ pub fn process_command(config: &Config) -> Result<()> {
 
         Commands::Del {
             keyword,
-            target_path,
+            // source_path,
+            // target_path,
         } => {
-            let default_path = Utf8PathBuf::default();
             let sub_args = &SubArgs {
                 keyword: keyword.as_deref().unwrap_or("").to_string(),
                 source_path: &default_path,
-                target_path: &target_path.as_ref().unwrap_or(&default_path),
+                target_path: &default_path,
             };
             DataManager::match_action(&mut data_manager, DataAction::Delete, &sub_args)
         }

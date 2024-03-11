@@ -1,7 +1,8 @@
 extern crate crossterm;
 use crate::data::{
     // data_manager::{SubArgs, DataManager},
-    json_manager::{self},
+    data_manager,
+    json_manager,
     model::DataModel,
 };
 use crossterm::{
@@ -11,23 +12,28 @@ use crossterm::{
     style::{Color, PrintStyledContent, Stylize},
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
 };
-use std::io::{self, BufRead, BufReader, Write};
+use serde_json::Value;
+use std::{
+    fs::File,
+    io::{self, BufRead, BufReader, Write},
+};
 
 pub enum MenuAction {
     Default,
-    Scan,
+    Delete,
     Pair,
     Unset,
 }
 
-pub fn navigate_menu(action: MenuAction) {
-    enable_raw_mode().expect("Failed to enable raw mode");
+pub fn navigate_menu(action: MenuAction) -> io::Result<()> {
     let mut cursor_x: usize = 0;
     let mut cursor_y = 0;
 
     let mut stage_num = 0;
-    let data_file = "./data.json";
-    // let mut menu = DataModel::json_mamager.parse_json();
+    let data_manager = data_manager::DataManager::new();
+    let mut data = data_manager.parse_json_data()?;
+    let index = "";
+    // if let Some(items) = data.get_mut(index).and_then(|p| p.as_array_mut()) {}
     // println!("{:?}", menu);
     let submenu: &[&str];
 
@@ -38,11 +44,13 @@ pub fn navigate_menu(action: MenuAction) {
     //     .map(|target| target.target_path.as_str())
     //     .collect::<Vec<&str>>();
 
+    enable_raw_mode().expect("Failed to enable raw mode");
     match action {
         MenuAction::Default => {
             submenu = default_submenu;
         }
         // MenuAction::Pair => submenu = pair_submenu,
+        // MenuAction::Delete => data = data.pairs,
         _ => {
             submenu = &[""];
         }
@@ -50,7 +58,7 @@ pub fn navigate_menu(action: MenuAction) {
 
     loop {
         execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
-        // print_stage(&menu, stage_num, cursor_y, cursor_x, submenu);
+        print_stage(&data, stage_num, cursor_y, cursor_x, submenu);
 
         if let Event::Key(event) = read().unwrap() {
             match event.code {
@@ -94,20 +102,21 @@ pub fn navigate_menu(action: MenuAction) {
     }
     disable_raw_mode().expect("Failed to disable raw mode");
     println!("\r");
+    Ok(())
 }
 
 fn print_stage(
-    menu: &DataModel,
+    data: &DataModel,
     stage_num: usize,
     cursor_y: usize,
     cursor_x: usize,
     submenu: &[&str],
 ) {
     match stage_num {
-        0 => print_menu(menu, cursor_y),
+        0 => print_menu(data, cursor_y),
         1 => {
             println!("\r");
-            println!("\x1B[33m{:?} \r", menu.pairs[cursor_y]);
+            println!("\x1B[33m{:?} \r", data.pairs[cursor_y]);
             println!("\x1B[0m\n");
 
             print_submenu(submenu, cursor_x);

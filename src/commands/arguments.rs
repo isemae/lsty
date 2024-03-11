@@ -17,10 +17,11 @@ pub enum Commands {
         target_path: Utf8PathBuf,
     },
     Del {
-        #[arg(value_name = "KEYWORD", required_unless_present = "target_path")]
+        #[arg(value_name = "KEYWORD")]
         keyword: Option<String>,
-        #[arg(value_name = "PATH", required_unless_present = "keyword")]
-        target_path: Option<Utf8PathBuf>,
+        // source_path: Option<Utf8PathBuf>,
+        // #[arg(value_name = "PATH", required_unless_present = "keyword")]
+        // target_path: Option<Utf8PathBuf>,
     },
     Move {
         keyword: String,

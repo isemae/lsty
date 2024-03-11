@@ -43,6 +43,12 @@ pub struct DataModel {
     pub pairs: Vec<Pair>,
 }
 
+#[derive(Debug)]
+pub struct ErrorAvailableKeywords {
+    pub message: String,
+    pub context: Vec<String>,
+}
+
 impl DataModel {
     pub fn new(data_manager: &DataManager) -> Self {
         let pairs = data_manager
