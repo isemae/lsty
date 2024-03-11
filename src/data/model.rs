@@ -13,13 +13,13 @@ use serde::{Deserialize, Serialize};
 //     pub data_manager: data_manager::DataManager, // pub symlinks: Vec<SymlinkInfo>,
 // }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Pair {
     pub source_path: String,
     pub source_targets: Vec<SourceTarget>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SourceTarget {
     pub target: String,
     pub keyword: String,
@@ -37,7 +37,7 @@ pub struct Target {
     pub keyword: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DataModel {
     // pub data_manager: &'a data_manager::DataManager<'a>,
     pub pairs: Vec<Pair>,

@@ -17,6 +17,7 @@ use std::{
     collections::HashSet,
     fs::{self, File, OpenOptions},
     io::{self, prelude::*, BufReader, BufWriter},
+    ops::Index,
     path::{Path, PathBuf},
     process,
 };
@@ -50,17 +51,17 @@ impl DataManager {
     }
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> std::io::Result<()> {
         // println!("{:?}", args);
+        let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel {
+            pairs: vec![Pair {
+                source_path: args.source_path.to_string(),
+                source_targets: vec![SourceTarget {
+                    target: args.target_path.to_string(),
+                    keyword: args.keyword.to_string(),
+                }],
+            }],
+        });
         match action {
             DataAction::Add => {
-                let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel {
-                    pairs: vec![Pair {
-                        source_path: args.source_path.to_string(),
-                        source_targets: vec![SourceTarget {
-                            target: args.target_path.to_string(),
-                            keyword: args.keyword.to_string(),
-                        }],
-                    }],
-                });
                 // let source_data = std::fs::read_to_string(&args.source_path)?;
                 match self.add_rule_to_json(
                     data,
@@ -79,20 +80,29 @@ impl DataManager {
                 };
             }
             DataAction::Delete => {
-                let mut data = self.load_data_file()?;
-
                 if args.keyword.is_empty() {
                     println!("delmenu")
                 } else {
                     println!("{}", args.source_path.as_str());
+
                     match self.remove_rule_from_json(
-                        data,
+                        data.clone(),
                         args.source_path.as_str(),
                         args.keyword.as_str(),
                     ) {
                         Ok(()) => println!("rule deleted successfully"),
                         Err(e) => {
                             eprintln!("Error: {}", e);
+                            println!(
+                                "keywords available: {}",
+                                data.pairs
+                                    .iter()
+                                    .flat_map(|p| p.source_targets.iter())
+                                    .filter(|k| !k.keyword.is_empty())
+                                    .map(|k| k.keyword.clone())
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            );
                             process::exit(1);
                         }
                     }
@@ -129,6 +139,7 @@ impl DataManager {
             ))),
         }
     }
+
     pub fn save_json_data(&self, data: DataModel) -> Result<(), io::Error> {
         let json = serde_json::to_vec_pretty(&data)?;
         let mut file = OpenOptions::new()
@@ -203,7 +214,6 @@ impl DataManager {
                 .source_targets
                 .iter()
                 .any(|target| target.target == target_path && target.keyword == keyword);
-
             if !target_exist {
                 pair.source_targets.push(SourceTarget {
                     target: target_path.to_string(),
@@ -226,54 +236,38 @@ impl DataManager {
 
     fn remove_rule_from_json(
         &self,
-        mut data: Value,
+        mut data: DataModel,
         source_path: &str,
         keyword: &str,
     ) -> Result<(), io::Error> {
-        let mut should_write = false;
-
-        if let Some(pairs) = data.get_mut("pairs").and_then(|p| p.as_array_mut()) {
-            let mut index_to_remove = None;
-
-            for (index, pair) in pairs.iter_mut().enumerate() {
-                if let Some(source) = pair.get_mut("source_path").and_then(|s| s.as_str()) {
-                    if source == source_path {
-                        if let Some(targets) = pair
-                            .get_mut("source_targets")
-                            .and_then(|t| t.as_array_mut())
-                        {
-                            // keyword validation
-                            let keyword_exists = targets.iter().any(|t| {
-                                t.get("keyword")
-                                    .and_then(|k| k.as_str())
-                                    .map(|k| k == keyword)
-                                    .unwrap_or(false)
-                            });
-                            if !keyword_exists {
-                                return Err(io::Error::new(
-                                    io::ErrorKind::InvalidInput,
-                                    "no such keyword rule for the current path",
-                                ));
-                            }
-
-                            targets.retain(|t| t["keyword"] != Value::String(keyword.to_string()));
-                            should_write = true;
-                            break;
-                        }
-                    } else if pair["source_targets"].as_array().unwrap().is_empty() {
-                        index_to_remove = Some(index);
-                    }
-                }
-            }
-            if let Some(index) = index_to_remove {
-                pairs.remove(index);
-                should_write = true;
+        // source(current path) validation
+        if let Some(pair) = data
+            .pairs
+            .iter_mut()
+            .find(|pair| pair.source_path == source_path)
+        {
+            if let Some(index) = pair
+                .source_targets
+                .iter()
+                .position(|st| st.keyword == keyword)
+            {
+                pair.source_targets.remove(index);
+            } else {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "no such keyword rule for the current path",
+                ));
             }
 
-            if should_write && menu::get_yn_input() {
+            if menu::get_yn_input() {
                 let mut file = File::create("data.json")?;
                 serde_json::to_writer_pretty(&mut file, &data)?;
             }
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "no such source path in the data model",
+            ));
         }
         Ok(())
     }
