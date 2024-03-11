@@ -49,16 +49,19 @@ impl DataManager {
         // let paths = HashSet::new();
     }
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> std::io::Result<()> {
-        println!("{:?}", args);
+        // println!("{:?}", args);
         match action {
             DataAction::Add => {
                 // let source_data = std::fs::read_to_string(&args.source_path)?;
-                match self.add_lst_to_json(
+                match self.add_rule_to_json(
                     args.source_path.as_str(),
                     args.target_path.as_str(),
                     &args.keyword.to_string(),
                 ) {
-                    Ok(()) => println!("Data added successfully!"),
+                    Ok(()) => {
+                        self.print_rule_info(args);
+                        println!("rule added.")
+                    }
                     Err(e) => {
                         eprintln!("Error: {}", e);
                         process::exit(1);
@@ -67,7 +70,7 @@ impl DataManager {
             }
             DataAction::Delete => {
                 // self.delete_from(args.target_path.to_owned(), args.keyword.as_str())?
-                self.remove_lst_from_json(args.keyword.as_str())?
+                self.remove_rule_from_json(args.keyword.as_str())?
             }
             DataAction::Read => {
                 self.scan_path(args.source_path);
@@ -150,7 +153,7 @@ impl DataManager {
     //     }
     // }
 
-    pub fn add_lst_to_json(
+    pub fn add_rule_to_json(
         &self,
         source_path: &str,
         target_path: &str,
@@ -204,21 +207,20 @@ impl DataManager {
         Ok(())
     }
 
-    fn remove_lst_from_json(&self, keyword: &str) -> std::io::Result<()> {
+    fn remove_rule_from_json(&self, keyword: &str) -> std::io::Result<()> {
         let file = File::open("data.json")?;
         let mut data: serde_json::Value = serde_json::from_reader(file)?;
+
         if menu::get_yn_input() {
             if let Some(pairs) = data.get_mut("pairs").and_then(|p| p.as_array_mut()) {
-                pairs.retain(|pair| {
-                    pair["source_targets"]
-                        .as_array()
-                        .map(|targets| {
-                            !targets
-                                .iter()
-                                .any(|t| t["keyword"] == Value::String(keyword.to_string()))
-                        })
-                        .unwrap_or(false)
-                });
+                for pair in pairs.iter_mut() {
+                    if let Some(targets) = pair
+                        .get_mut("source_targets")
+                        .and_then(|t| t.as_array_mut())
+                    {
+                        targets.retain(|t| t["keyword"] != Value::String(keyword.to_string()))
+                    }
+                }
             }
             let mut file = File::create("data.json")?;
             serde_json::to_writer_pretty(&mut file, &data)?;
@@ -288,7 +290,6 @@ impl DataManager {
                         }
                         moved_count += 1;
                     }
-                    // checks if the normalized keyword exists in the filename and moves the file if it has the keyword
                 }
 
                 println!("TARGET: {}", target_path.yellow());
@@ -300,22 +301,21 @@ impl DataManager {
         Ok(())
     }
 
-    // fn print_rule_info(&self, action: &str, config:&Config) -> io::Result<()> {
-    //     let mut source_path = Utf8PathBuf::new();
-    //     let mut target_path = Utf8PathBuf::new();
+    fn print_rule_info(&self, args: &SubArgs) -> io::Result<()> {
+        let mut source_path = Utf8PathBuf::new();
+        let mut target_path = Utf8PathBuf::new();
 
-    //     source_path.push(config.get_source_path().unwrap());
-    //     target_path.push(config.get_source_path().unwrap());
+        source_path.push(args.source_path);
+        target_path.push(args.target_path);
 
-    //     let keyword = config.get_keyword().unwrap_or("empty_keyword");
+        let keyword = &args.keyword;
 
-    //     println!("add this rule? (y/n):");
-    //     println!("┊ Keyword: {}", keyword);
-    //     println!("┊ - SOURCE: \x1b[4m{:?}\x1b[0m", source_path);
-    //     println!("┊ - TARGET: └─> \x1b[4m{:?}\x1b[0m", target_path);
-    //     println!("");
-    //     Ok(())
-    // }
+        println!("┊ - KEYWORD: {}", keyword);
+        println!("┊ - SOURCE : \x1b[4m{:?}\x1b[0m", source_path);
+        println!("┊ - TARGET : └─> \x1b[4m{:?}\x1b[0m", target_path);
+        println!("");
+        Ok(())
+    }
 
     fn scan_path(&mut self, path: &Utf8PathBuf) {}
 }
