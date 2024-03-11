@@ -44,10 +44,7 @@ pub enum DataAction {
 
 impl DataManager {
     pub fn new() -> Self {
-        // let data = load_data_file();
-        // DataManager { data }
         DataManager
-        // let paths = HashSet::new();
     }
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> std::io::Result<()> {
         // println!("{:?}", args);
@@ -56,7 +53,6 @@ impl DataManager {
         });
         match action {
             DataAction::Add => {
-                // let source_data = std::fs::read_to_string(&args.source_path)?;
                 match self.add_rule_to_json(
                     data,
                     args.source_path.to_string(),
@@ -135,12 +131,8 @@ impl DataManager {
     }
 
     pub fn save_json_data(&self, data: DataModel) -> Result<(), io::Error> {
-        let json = serde_json::to_vec_pretty(&data)?;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open("./data.json")?;
-        file.write_all(&json)?;
+        let mut file = File::create("data.json")?;
+        serde_json::to_writer_pretty(&mut file, &data)?;
         Ok(())
     }
 
@@ -199,20 +191,39 @@ impl DataManager {
             ));
         }
 
-        if let Some(pair) = data.pairs.iter_mut().find(|pair| pair.0 == &source_path) {
-            let target_exist = pair
-                .1
-                .iter()
-                .any(|kv| kv.1 == &target_path && kv.0 == &keyword);
-            if !target_exist {
-                pair.1.insert(keyword, target_path);
+        if let Some(pair) = data.pairs.get_mut(&source_path) {
+            let target_exist = pair.get_key_value(&target_path).is_some();
+            let keyword_exist = pair.get_key_value(&keyword).is_some();
+            if !target_exist && !keyword_exist {
+                pair.insert(keyword, target_path);
+                self.save_json_data(data);
+            } else if target_exist {
+                eprintln!(
+                    "rule for the target '{}' already exists. do you want to change the keyword?",
+                    target_path
+                );
+                if menu::get_yn_input() {
+                    pair.insert(keyword, target_path);
+                    self.save_json_data(data);
+                }
+            } else {
+                eprintln!(
+                    "rule for the keyword '{}' already exists. do you want to change the target?",
+                    keyword
+                );
+                if menu::get_yn_input() {
+                    pair.insert(keyword, target_path);
+                    self.save_json_data(data);
+                }
             }
-        } else {
-            let mut new_pair = HashMap::new();
-            new_pair.insert(keyword, target_path);
-            data.pairs.insert(source_path, new_pair);
         }
-        self.save_json_data(data)?;
+        // else {
+        //     let mut new_pair = HashMap::new();
+        //     new_pair.insert(keyword, target_path);
+        //     data.pairs.insert(source_path, new_pair);
+        // }
+        // self.save_json_data(data)?;
+
         Ok(())
     }
 
@@ -234,8 +245,7 @@ impl DataManager {
             }
 
             if menu::get_yn_input() {
-                let mut file = File::create("data.json")?;
-                serde_json::to_writer_pretty(&mut file, &data)?;
+                self.save_json_data(data);
             }
         } else {
             return Err(io::Error::new(

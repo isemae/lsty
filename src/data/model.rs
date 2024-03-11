@@ -5,67 +5,11 @@ use super::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-// #[derive(Serialize, Deserialize, Debug)]
-// pub struct DataModel {
-//     pub pairs: Vec<Pair>,
-//     pub sources: Vec<Source>,
-//     pub targets: Vec<Target>,
-//     pub json_manager: json_manager::JsonManager,
-//     pub data_manager: data_manager::DataManager, // pub symlinks: Vec<SymlinkInfo>,
-// }
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DataModel {
-    // pub data_manager: &'a data_manager::DataManager<'a>,
     pub pairs: HashMap<String, HashMap<String, String>>,
 }
 
-// #[derive(Debug, Serialize, Deserialize, Clone)]
-// pub struct Pair {
-//     pub pairmap: HashMap<String, String>,
-//     // pub source_path: String,
-//     // pub source_targets: Vec<SourceTarget>,
-// }
-
-// #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
-// pub struct Keyword {
-//     pub keyword: String,
-// }
-// #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
-// pub struct Target {
-//     pub target_path: String,
-// }
-
-// #[derive(Debug, Serialize, Deserialize, Clone)]
-// pub struct SourceTarget {
-//     pub target: String,
-//     pub keyword: String,
-// }
-
-// #[derive(Serialize, Deserialize, Debug)]
-// pub struct Source {
-//     pub source_path: String,
-//     pub keywords: Vec<String>,
-// }
-
-// #[derive(Serialize, Deserialize, Debug)]
-// pub struct Target {
-//     pub target_path: String,
-//     pub keyword: String,
-// }
-
-// #[derive(Debug)]
-// pub struct ErrorAvailableKeywords {
-//     pub message: String,
-//     pub context: Vec<String>,
-// }
-// impl Pair {
-//     pub fn new() -> Self {
-//         Pair {
-//             pairmap: HashMap::new(),
-//         }
-//     }
-// }
 impl DataModel {
     fn new() -> Self {
         DataModel {
