@@ -1,0 +1,49 @@
+{
+  "pairs": [
+    {
+      "source_path": "/Users/ji/Desktop/Rust/works/테스트1",
+      "source_targets": [
+        {
+          "target": "/Users/ji/Desktop/Rust/works/테스트2/xpt",
+          "keyword": "무빙"
+        }
+      ]
+    },
+    {
+      "source_path": "/Users/ji/Desktop/Rust/works/테스트3",
+      "source_targets": [
+        {
+          "target": "/Users/ji/Desktop/Rust/works/테스트4",
+          "keyword": "무빙"
+        }
+      ]
+    },
+    {
+      "source_path": "/Users/ji/Desktop/Rust/works/lsty",
+      "source_targets": [
+        {
+          "target": "/Users/ji/Desktop/Rust/works/테스트3",
+          "keyword": "fff"
+        },
+        {
+          "target": "/Users/ji/Desktop/Rust/works/테스트3",
+          "keyword": "ffffqfqfiqfqfqf"
+        }
+      ]
+    }
+  ],
+  "maps": {
+    "/Users/ji/Desktop/Rust/works/테스트1": {
+      "무빙": "/Users/ji/Desktop/Rust/works/테스트2/xpt"
+    },
+    "/Users/ji/Desktop/Rust/works/테스트3": {
+      "무빙": "/Users/ji/Desktop/Rust/works/테스트4",
+      "fff": "/Users/ji/Desktop/Rust/works/테스트3",
+      "ffffqfqfiqfqfqf": "/Users/ji/Desktop/Rust/works/테스트3"
+    },
+    "/Users/ji/Desktop/Rust/works/lsty": {
+      "fff": "/Users/ji/Desktop/Rust/works/테스트3",
+      "ffffqfqfiqfqfqf": "/Users/ji/Desktop/Rust/works/테스트3"
+    }
+  }
+}

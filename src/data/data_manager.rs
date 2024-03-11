@@ -14,7 +14,7 @@ use colored::*;
 use regex::Regex;
 use serde_json::{from_str, Value};
 use std::{
-    collections::HashSet,
+    collections::HashMap,
     fs::{self, File, OpenOptions},
     io::{self, prelude::*, BufReader, BufWriter},
     ops::Index,
@@ -52,22 +52,16 @@ impl DataManager {
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> std::io::Result<()> {
         // println!("{:?}", args);
         let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel {
-            pairs: vec![Pair {
-                source_path: args.source_path.to_string(),
-                source_targets: vec![SourceTarget {
-                    target: args.target_path.to_string(),
-                    keyword: args.keyword.to_string(),
-                }],
-            }],
+            pairs: HashMap::new(),
         });
         match action {
             DataAction::Add => {
                 // let source_data = std::fs::read_to_string(&args.source_path)?;
                 match self.add_rule_to_json(
                     data,
-                    args.source_path.as_str(),
-                    args.target_path.as_str(),
-                    &args.keyword.to_string(),
+                    args.source_path.to_string(),
+                    args.target_path.to_string(),
+                    args.keyword.clone(),
                 ) {
                     Ok(()) => {
                         self.print_rule_info(args);
@@ -97,9 +91,9 @@ impl DataManager {
                                 "keywords available: {}",
                                 data.pairs
                                     .iter()
-                                    .flat_map(|p| p.source_targets.iter())
-                                    .filter(|k| !k.keyword.is_empty())
-                                    .map(|k| k.keyword.clone())
+                                    .flat_map(|data| data.1)
+                                    .filter(|k| !k.0.is_empty())
+                                    .map(|k| k.0.clone())
                                     .collect::<Vec<_>>()
                                     .join(", ")
                             );
@@ -193,11 +187,11 @@ impl DataManager {
     pub fn add_rule_to_json(
         &self,
         mut data: DataModel,
-        source_path: &str,
-        target_path: &str,
-        keyword: &str,
+        source_path: String,
+        target_path: String,
+        keyword: String,
     ) -> io::Result<()> {
-        let target_path_on_volume = Utf8Path::new(target_path);
+        let target_path_on_volume = Utf8Path::new(target_path.as_str());
         if !target_path_on_volume.exists() || !target_path_on_volume.is_dir() {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
@@ -205,32 +199,20 @@ impl DataManager {
             ));
         }
 
-        if let Some(pair) = data
-            .pairs
-            .iter_mut()
-            .find(|pair| pair.source_path == source_path)
-        {
+        if let Some(pair) = data.pairs.iter_mut().find(|pair| pair.0 == &source_path) {
             let target_exist = pair
-                .source_targets
+                .1
                 .iter()
-                .any(|target| target.target == target_path && target.keyword == keyword);
+                .any(|kv| kv.1 == &target_path && kv.0 == &keyword);
             if !target_exist {
-                pair.source_targets.push(SourceTarget {
-                    target: target_path.to_string(),
-                    keyword: keyword.to_string(),
-                })
+                pair.1.insert(keyword, target_path);
             }
         } else {
-            let new_pair = Pair {
-                source_path: source_path.to_string(),
-                source_targets: vec![SourceTarget {
-                    target: target_path.to_string(),
-                    keyword: keyword.to_string(),
-                }],
-            };
-            data.pairs.push(new_pair);
+            let mut new_pair = HashMap::new();
+            new_pair.insert(keyword, target_path);
+            data.pairs.insert(source_path, new_pair);
         }
-        self.save_json_data(data);
+        self.save_json_data(data)?;
         Ok(())
     }
 
@@ -241,17 +223,9 @@ impl DataManager {
         keyword: &str,
     ) -> Result<(), io::Error> {
         // source(current path) validation
-        if let Some(pair) = data
-            .pairs
-            .iter_mut()
-            .find(|pair| pair.source_path == source_path)
-        {
-            if let Some(index) = pair
-                .source_targets
-                .iter()
-                .position(|st| st.keyword == keyword)
-            {
-                pair.source_targets.remove(index);
+        if let Some(targets) = data.pairs.get_mut(source_path) {
+            if targets.contains_key(keyword) {
+                targets.remove(keyword);
             } else {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
@@ -287,13 +261,13 @@ impl DataManager {
         let data: DataModel = self.parse_json_data()?;
 
         for pair in data.pairs.iter() {
-            let source_path = &pair.source_path;
+            let source_path = &pair.0;
             let target_path = pair
-                .source_targets
+                .1
                 .iter()
-                .find(|target| target.keyword == keyword)
-                .map(|target| target.target.as_str())
-                .unwrap_or("");
+                .find(|target| target.0 == keyword)
+                .map(|target| target.1.as_str())
+                .unwrap_or(&"");
 
             // checks if source path exists
             if !target_path.is_empty() {

@@ -116,7 +116,7 @@ fn print_stage(
         0 => print_menu(data, cursor_y),
         1 => {
             println!("\r");
-            println!("\x1B[33m{:?} \r", data.pairs[cursor_y]);
+            // println!("\x1B[33m{:?} \r", data.pairs[cursor_y]);
             println!("\x1B[0m\n");
 
             print_submenu(submenu, cursor_x);
