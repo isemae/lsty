@@ -8,6 +8,8 @@ use commands::{arguments, command_manager};
 fn main() {
     let args = arguments::Config::parse();
 
-    println!("{:?}", args);
-    command_manager::process_command(&args);
+    match command_manager::process_command(&args) {
+        Ok(()) => {}
+        Err(e) => {}
+    }
 }

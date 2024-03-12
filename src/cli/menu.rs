@@ -15,7 +15,7 @@ use crossterm::{
 use serde_json::Value;
 use std::{
     fs::File,
-    io::{self, BufRead, BufReader, Write},
+    io::{self, BufRead, BufReader, Read, Write},
 };
 
 pub enum MenuAction {
@@ -147,18 +147,29 @@ fn print_submenu(submenu: &[&str], cursor_x: usize) {
 }
 
 pub fn get_yn_input() -> bool {
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read line");
-    let input = input.trim();
-    match input {
-        "y" | "Y" => {
-            return true;
+    // let mut input = String::new();
+    // io::stdin()
+    //     .read_to_string(&mut input)
+    //     .expect("Failed to read line");
+
+    // let filtered_input: String = input.chars().filter(|&c| "ynYN".contains(c)).collect();
+    enable_raw_mode().expect("Failed to enable raw mode");
+    loop {
+        if let Ok(Event::Key(event)) = read() {
+            execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
+            match event.code {
+                KeyCode::Char('y') | KeyCode::Char('ㅛ') => {
+                    disable_raw_mode().expect("Failed to disable raw mode");
+                    return true;
+                }
+                KeyCode::Char('n') | KeyCode::Char('ㅜ') => {
+                    disable_raw_mode().expect("Failed to disable raw mode");
+                    return false;
+                }
+                _ => {
+                    println!("y/N:");
+                }
+            }
         }
-        "n" | "N" => {
-            return false;
-        }
-        _ => get_yn_input(),
     }
 }

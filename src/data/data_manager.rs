@@ -53,16 +53,14 @@ impl DataManager {
         });
         match action {
             DataAction::Add => {
+                self.print_rule_info(args);
                 match self.add_rule_to_json(
                     data,
                     args.source_path.to_string(),
                     args.target_path.to_string(),
                     args.keyword.clone(),
                 ) {
-                    Ok(()) => {
-                        self.print_rule_info(args);
-                        println!("rule added.")
-                    }
+                    Ok(()) => {}
                     Err(e) => {
                         eprintln!("Error: {}", e);
                         process::exit(1);
@@ -84,14 +82,16 @@ impl DataManager {
                         Err(e) => {
                             eprintln!("Error: {}", e);
                             println!(
-                                "keywords available: {}",
-                                data.pairs
-                                    .iter()
-                                    .flat_map(|data| data.1)
-                                    .filter(|k| !k.0.is_empty())
-                                    .map(|k| k.0.clone())
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
+                                "keywords available for current path: \n '{}'",
+                                if let Some(pair) = data.pairs.get_mut(args.source_path.as_str()) {
+                                    pair.iter()
+                                        .map(|(k, _)| k.clone())
+                                        .collect::<Vec<_>>()
+                                        .join("', '")
+                                } else {
+                                    "".to_string()
+                                }
+                                .yellow()
                             );
                             process::exit(1);
                         }
@@ -104,15 +104,12 @@ impl DataManager {
             DataAction::Move => {
                 self.move_dirs(&args.keyword)?;
             }
-            DataAction::Copy => {
-                // self.add_new_rule(&args.keyword, args.source_path, args.target_path);
-            }
+            DataAction::Copy => {}
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
         }
         Ok(())
     }
 
-    // pub fn parse_json_data<DataModel: for<'b> Deserialize<'b>>(&self,) -> Result<Vec<DataModel>, serde_json::Error> {
     pub fn parse_json_data(&self) -> Result<DataModel, serde_json::Error> {
         match File::open("./data.json") {
             Ok(mut file) => {
@@ -130,51 +127,11 @@ impl DataManager {
         }
     }
 
-    pub fn save_json_data(&self, data: DataModel) -> Result<(), io::Error> {
+    pub fn save_json_data(&self, data: &DataModel) -> Result<(), io::Error> {
         let mut file = File::create("data.json")?;
         serde_json::to_writer_pretty(&mut file, &data)?;
         Ok(())
     }
-
-    // fn add_new_rule(
-    //     &mut self,
-    //     keyword: &str,
-    //     source_path: &Utf8PathBuf,
-    //     target_path: &Utf8PathBuf,
-    // ) -> io::Result<()> {
-    //     // self.print_rule_info("add", &cli)?;
-
-    //     let mut data = DataModel::new(self);
-    //     let new_rule: DataModel;
-
-    //     if Utf8PathBuf::from(source_path).exists() {
-    //         if menu::get_yn_input() {
-    //             if let Err(err) = DataModel::add_source_target(
-    //                 &mut data,
-    //                 source_path.as_str(),
-    //                 target_path.as_str(),
-    //                 keyword,
-    //             ) {
-    //                 eprintln!("Failed to create data file: {}", err);
-    //                 return Err(err.into());
-    //             }
-    //         }
-
-    //         println!("new rule added:");
-    //         println!(
-    //             "items that has keyword \x1b[4m{:?}\x1b[0m will be moved",
-    //             keyword
-    //         );
-    //         println!("Data added from {:?} to {:?}", source_path, target_path);
-    //         Ok(())
-    //     } else {
-    //         println!("No such path exists on the volume.");
-    //         Err(io::Error::new(
-    //             io::ErrorKind::NotFound,
-    //             "No such path exists.",
-    //         ))
-    //     }
-    // }
 
     pub fn add_rule_to_json(
         &self,
@@ -192,38 +149,33 @@ impl DataManager {
         }
 
         if let Some(pair) = data.pairs.get_mut(&source_path) {
-            let target_exist = pair.get_key_value(&target_path).is_some();
-            let keyword_exist = pair.get_key_value(&keyword).is_some();
-            if !target_exist && !keyword_exist {
+            if !pair.contains_key(&target_path) && !pair.contains_key(&keyword) {
                 pair.insert(keyword, target_path);
-                self.save_json_data(data);
-            } else if target_exist {
+            } else if pair.contains_key(&keyword) {
                 eprintln!(
-                    "rule for the target '{}' already exists. do you want to change the keyword?",
+                    "rule for the target '{}' already exists. do you want to change the keyword? (y/N):",
                     target_path
                 );
                 if menu::get_yn_input() {
                     pair.insert(keyword, target_path);
-                    self.save_json_data(data);
+                    println!("rule added.")
                 }
             } else {
                 eprintln!(
-                    "rule for the keyword '{}' already exists. do you want to change the target?",
+                    "rule for the keyword '{}' already exists. do you want to change the target? (y/N):",
                     keyword
                 );
                 if menu::get_yn_input() {
                     pair.insert(keyword, target_path);
-                    self.save_json_data(data);
+                    println!("rule added.")
                 }
             }
+        } else {
+            let mut new_pair = HashMap::new();
+            new_pair.insert(keyword, target_path);
+            data.pairs.insert(source_path, new_pair);
         }
-        // else {
-        //     let mut new_pair = HashMap::new();
-        //     new_pair.insert(keyword, target_path);
-        //     data.pairs.insert(source_path, new_pair);
-        // }
-        // self.save_json_data(data)?;
-
+        self.save_json_data(&data)?;
         Ok(())
     }
 
@@ -245,27 +197,27 @@ impl DataManager {
             }
 
             if menu::get_yn_input() {
-                self.save_json_data(data);
+                self.save_json_data(&data);
             }
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
-                "no such source path in the data model",
+                "no rule for the current path in the data",
             ));
         }
         Ok(())
     }
 
-    pub fn load_data_file(&self) -> Result<Value, io::Error> {
-        let file = File::open("data.json")?;
-        let mut buffer = String::new();
-        let mut reader = io::BufReader::new(file);
-        reader.read_to_string(&mut buffer)?;
+    // pub fn load_data_file(&self) -> Result<Value, io::Error> {
+    //     let file = File::open("data.json")?;
+    //     let mut buffer = String::new();
+    //     let mut reader = io::BufReader::new(file);
+    //     reader.read_to_string(&mut buffer)?;
 
-        let data: Value = serde_json::from_str(&buffer)?;
+    //     let data: Value = serde_json::from_str(&buffer)?;
 
-        Ok(data)
-    }
+    //     Ok(data)
+    // }
 
     fn move_dirs(&self, keyword: &str) -> io::Result<()> {
         let data: DataModel = self.parse_json_data()?;

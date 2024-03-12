@@ -1,5 +1,6 @@
 use camino::Utf8PathBuf;
 use clap::{builder, ArgGroup, Args, Command, Parser, Subcommand, ValueEnum};
+
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::{Path, PathBuf};
@@ -12,17 +13,17 @@ pub struct Config {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    #[command(name = "-a")]
     Add {
         keyword: String,
         target_path: Utf8PathBuf,
     },
+    #[command(name = "-d")]
     Del {
         #[arg(value_name = "KEYWORD")]
         keyword: Option<String>,
-        // source_path: Option<Utf8PathBuf>,
-        // #[arg(value_name = "PATH", required_unless_present = "keyword")]
-        // target_path: Option<Utf8PathBuf>,
     },
+    #[command(name = "-m")]
     Move {
         keyword: String,
         target_path: Option<Utf8PathBuf>,
