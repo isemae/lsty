@@ -34,13 +34,9 @@ pub fn process_command(config: &Config) -> Result<()> {
             DataManager::match_action(&mut data_manager, DataAction::Add, sub_args)
         }
 
-        Commands::Del {
-            keyword,
-            // source_path,
-            // target_path,
-        } => {
+        Commands::Del { keyword } => {
             let sub_args = &SubArgs {
-                keyword: keyword.as_deref().unwrap_or("").to_string(),
+                keyword: keyword.clone().unwrap_or_default(),
                 source_path: &default_path,
                 target_path: &default_path,
             };
@@ -51,9 +47,9 @@ pub fn process_command(config: &Config) -> Result<()> {
             target_path,
         } => {
             let sub_args = &SubArgs {
-                keyword: keyword.to_string(),
+                keyword: keyword.clone().unwrap_or_default(),
                 source_path: &default_path,
-                target_path: &target_path.as_ref().unwrap_or(&default_path),
+                target_path: target_path.as_ref().unwrap_or(default_path),
             };
             DataManager::match_action(&mut data_manager, DataAction::Move, &sub_args)
         }

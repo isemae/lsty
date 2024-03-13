@@ -1,5 +1,4 @@
 use super::model::*;
-
 use crate::{
     cli::menu,
     commands::arguments::{Commands, Config, SubArgs},
@@ -7,14 +6,17 @@ use crate::{
     data::{json_manager, model::DataModel},
     Args,
 };
-use serde::{ser::Error, Deserialize, Serialize};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use colored::*;
+use fs_extra;
+
 use regex::Regex;
+use serde::{ser::Error, Deserialize, Serialize};
 use serde_json::{from_str, Value};
 use std::{
     collections::HashMap,
+    env,
     fs::{self, File, OpenOptions},
     io::{self, prelude::*, BufReader, BufWriter},
     ops::Index,
@@ -111,7 +113,9 @@ impl DataManager {
     }
 
     pub fn parse_json_data(&self) -> Result<DataModel, serde_json::Error> {
-        match File::open("./data.json") {
+        let exe_path = env::current_exe().unwrap();
+        let exe_dir = exe_path.parent().unwrap();
+        match File::open(exe_dir.join("lsty.json")) {
             Ok(mut file) => {
                 let mut data = String::new();
                 match file.read_to_string(&mut data) {
@@ -128,7 +132,10 @@ impl DataManager {
     }
 
     pub fn save_json_data(&self, data: &DataModel) -> Result<(), io::Error> {
-        let mut file = File::create("data.json")?;
+        let exe_path = env::current_exe().unwrap();
+        let exe_dir = exe_path.parent().unwrap();
+
+        let mut file = File::create(exe_dir.join("lsty.json"))?;
         serde_json::to_writer_pretty(&mut file, &data)?;
         Ok(())
     }
@@ -209,7 +216,7 @@ impl DataManager {
     }
 
     // pub fn load_data_file(&self) -> Result<Value, io::Error> {
-    //     let file = File::open("data.json")?;
+    //     let file = File::open("lsty.json")?;
     //     let mut buffer = String::new();
     //     let mut reader = io::BufReader::new(file);
     //     reader.read_to_string(&mut buffer)?;
@@ -221,77 +228,98 @@ impl DataManager {
 
     fn move_dirs(&self, keyword: &str) -> io::Result<()> {
         let data: DataModel = self.parse_json_data()?;
+        if keyword != "" {
+            for pair in data.pairs.iter() {
+                let source_path = &pair.0;
+                let target_path = pair
+                    .1
+                    .iter()
+                    .find(|target| target.0 == keyword)
+                    .map(|target| target.1.as_str())
+                    .unwrap_or(&"");
 
-        for pair in data.pairs.iter() {
-            let source_path = &pair.0;
-            let target_path = pair
-                .1
-                .iter()
-                .find(|target| target.0 == keyword)
-                .map(|target| target.1.as_str())
-                .unwrap_or(&"");
+                // checks if source path exists
+                if !target_path.is_empty() {
+                    println!("");
+                    if !Path::new(source_path).exists() {
+                        eprintln!(
+                            "\x1b[0;31m ✘ Source path {} does not exist\x1b[0m",
+                            source_path.yellow()
+                        );
+                        continue;
+                    } else {
+                        println!("SOURCE: {}", source_path.yellow());
+                    }
 
-            // checks if source path exists
-            if !target_path.is_empty() {
-                println!("");
-                if !Path::new(source_path).exists() {
-                    eprintln!(
-                        "\x1b[0;31m ✘ Source path {} does not exist\x1b[0m",
-                        source_path.yellow()
-                    );
-                    continue;
-                } else {
-                    println!("SOURCE: {}", source_path.yellow());
-                }
-
-                if !Path::new(target_path).exists() {
-                    eprintln!(
+                    if !Path::new(target_path).exists() {
+                        eprintln!(
                         "\x1b[0;33m⚠ target path '{}' does not exist. Creating the directory...\x1b[0m",
                         target_path.yellow()
                     );
-                    fs::create_dir_all(&target_path);
-                }
-                // generates regex pattern
-                let re = Regex::new(&format!(r"{}", &keyword)).unwrap();
-                let entries = fs::read_dir(source_path)?;
-                let mut moved_count = 0;
+                        fs::create_dir_all(&target_path).expect("fff");
+                    }
+                    // generates regex pattern
+                    let re = Regex::new(&format!(r"{}", &keyword)).unwrap();
+                    let mut moved_count = 0;
 
-                for entry in entries {
-                    let entry = entry?;
-                    let item_path = entry.path();
-                    let item_name = match item_path.file_name() {
-                        Some(name) => name.to_string_lossy(),
-                        None => continue,
-                    };
-                    let normalized = item_name.nfc().collect::<String>();
-                    if re.is_match(&item_name) {
-                        let new_path = format!("{}/{}", target_path, normalized);
-                        if Path::new(&new_path).exists() {
-                            println!(
+                    let entries = fs::read_dir(source_path)?;
+                    for entry in entries {
+                        let entry = entry?;
+                        let item_path = entry.path();
+                        let item_name = match item_path.file_name() {
+                            Some(name) => name.to_string_lossy(),
+                            None => continue,
+                        };
+                        let normalized = item_name.nfc().collect::<String>();
+                        if re.is_match(&item_name) {
+                            let new_path = format!("{}/{}", target_path, normalized);
+                            if Path::new(&new_path).exists() {
+                                println!(
                                 "│ \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
                                 item_name
                             );
-                            continue;
-                        } else {
-                            println!(
-                                "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
-                                item_name
-                            );
-                            fs::rename(&item_path, &new_path)?;
+                                continue;
+                            } else {
+                                println!(
+                                    "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
+                                    item_name
+                                );
+                                fs::create_dir_all(&new_path).expect("");
+                                self.copy_dir(&item_path, &PathBuf::from(&new_path))
+                                    .expect("");
+                                fs::remove_dir_all(&item_path).expect("");
+                            }
+                            moved_count += 1;
                         }
-                        moved_count += 1;
+                    }
+
+                    println!("TARGET: {}", target_path.yellow());
+                    if moved_count == 0 {
+                        println!("No items to move");
                     }
                 }
-
-                println!("TARGET: {}", target_path.yellow());
-                if moved_count == 0 {
-                    println!("No items to move");
-                }
             }
+        } else {
+            println!("mmmm")
         }
         Ok(())
     }
 
+    fn copy_dir(&self, src: &PathBuf, trg: &PathBuf) -> std::io::Result<()> {
+        for entry in fs::read_dir(src)? {
+            let entry = entry?;
+            let file_path = entry.path();
+            let file_name = file_path.file_name().unwrap().to_str().unwrap();
+            let new_path = trg.join(file_name);
+            if file_path.is_dir() {
+                fs::create_dir_all(&new_path)?;
+                self.copy_dir(&file_path, &new_path)?;
+            } else {
+                fs::copy(&file_path, &new_path).expect("");
+            }
+        }
+        Ok(())
+    }
     fn print_rule_info(&self, args: &SubArgs) -> io::Result<()> {
         let mut source_path = Utf8PathBuf::new();
         let mut target_path = Utf8PathBuf::new();

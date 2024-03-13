@@ -13,19 +13,19 @@ pub struct Config {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    #[command(name = "-a")]
+    #[command(alias = "-a")]
     Add {
         keyword: String,
         target_path: Utf8PathBuf,
     },
-    #[command(name = "-d")]
+    #[command(alias = "-d")]
     Del {
         #[arg(value_name = "KEYWORD")]
         keyword: Option<String>,
     },
-    #[command(name = "-m")]
+    #[command(alias = "-m")]
     Move {
-        keyword: String,
+        keyword: Option<String>,
         target_path: Option<Utf8PathBuf>,
     },
     Scan,
