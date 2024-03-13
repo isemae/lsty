@@ -258,6 +258,7 @@ impl DataManager {
                     );
                         fs::create_dir_all(&target_path).expect("fff");
                     }
+
                     // generates regex pattern
                     let re = Regex::new(&format!(r"{}", &keyword)).unwrap();
                     let mut moved_count = 0;
@@ -284,10 +285,15 @@ impl DataManager {
                                     "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
                                     item_name
                                 );
-                                fs::create_dir_all(&new_path).expect("");
-                                self.copy_dir(&item_path, &PathBuf::from(&new_path))
-                                    .expect("");
-                                fs::remove_dir_all(&item_path).expect("");
+                                if item_path.is_dir() {
+                                    fs::create_dir_all(&new_path).expect("");
+                                    self.copy_dir(&item_path, &PathBuf::from(&new_path))
+                                        .expect("");
+                                    fs::remove_dir_all(&item_path).expect("");
+                                } else {
+                                    fs::copy(&item_path, new_path).expect("");
+                                    fs::remove_file(&item_path).expect("");
+                                }
                             }
                             moved_count += 1;
                         }
