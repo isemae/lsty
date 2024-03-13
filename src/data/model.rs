@@ -1,7 +1,4 @@
-use super::{
-    data_manager::{self, DataManager},
-    json_manager,
-};
+use super::data_manager::{self, DataManager};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -74,7 +71,7 @@ impl DataModel {
     //     }
 
     //     // DataManager::save_json_data(&data_manager)
-    //     // .save_json_data("data.json", &self.pairs)
+    //     // .save_json_data("lsty.json", &self.pairs)
     //     // .map_err(|e| e);
     //     Ok(())
     // }

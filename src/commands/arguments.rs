@@ -1,9 +1,7 @@
 use camino::Utf8PathBuf;
-use clap::{builder, ArgGroup, Args, Command, Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 
 use serde::{Deserialize, Serialize};
-use std::env;
-use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
 pub struct Config {

@@ -1,21 +1,9 @@
 extern crate crossterm;
-use crate::data::{
-    // data_manager::{SubArgs, DataManager},
-    data_manager,
-    json_manager,
-    model::DataModel,
-};
+use crate::data::{data_manager, model::DataModel};
 use crossterm::{
     event::{read, Event, KeyCode},
     execute,
-    style::Print,
-    style::{Color, PrintStyledContent, Stylize},
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
-};
-use serde_json::Value;
-use std::{
-    fs::File,
-    io::{self, BufRead, BufReader, Read, Write},
 };
 
 pub enum MenuAction {
@@ -25,13 +13,13 @@ pub enum MenuAction {
     Unset,
 }
 
-pub fn navigate_menu(action: MenuAction) -> io::Result<()> {
+pub fn navigate_menu(action: MenuAction) {
     let mut cursor_x: usize = 0;
     let mut cursor_y = 0;
 
     let mut stage_num = 0;
     let data_manager = data_manager::DataManager::new();
-    let mut data = data_manager.parse_json_data()?;
+    let mut data = data_manager.parse_json_data();
     let index = "";
     // if let Some(items) = data.get_mut(index).and_then(|p| p.as_array_mut()) {}
     // println!("{:?}", menu);
@@ -58,7 +46,13 @@ pub fn navigate_menu(action: MenuAction) -> io::Result<()> {
 
     loop {
         execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
-        print_stage(&data, stage_num, cursor_y, cursor_x, submenu);
+        print_stage(
+            &data.as_ref().unwrap(),
+            stage_num,
+            cursor_y,
+            cursor_x,
+            submenu,
+        );
 
         if let Event::Key(event) = read().unwrap() {
             match event.code {
@@ -102,7 +96,6 @@ pub fn navigate_menu(action: MenuAction) -> io::Result<()> {
     }
     disable_raw_mode().expect("Failed to disable raw mode");
     println!("\r");
-    Ok(())
 }
 
 fn print_stage(

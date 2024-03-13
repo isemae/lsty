@@ -1,25 +1,15 @@
-use super::model::*;
-use crate::{
-    cli::menu,
-    commands::arguments::{Commands, Config, SubArgs},
-    data::data_manager::json_manager::JsonManager,
-    data::{json_manager, model::DataModel},
-    Args,
-};
+use crate::{cli::menu, commands::arguments::SubArgs, data::model::DataModel, Args};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use colored::*;
-use fs_extra;
 
 use regex::Regex;
-use serde::{ser::Error, Deserialize, Serialize};
-use serde_json::{from_str, Value};
+use serde::ser::Error;
 use std::{
     collections::HashMap,
     env,
-    fs::{self, File, OpenOptions},
-    io::{self, prelude::*, BufReader, BufWriter},
-    ops::Index,
+    fs::{self, File},
+    io::{self, prelude::*},
     path::{Path, PathBuf},
     process,
 };
@@ -36,26 +26,26 @@ pub enum DataAction {
     Add,
     Delete,
     Move,
-    Copy,
+    Import,
     Read,
 }
-
-// trait DataModelTrait {
-//     fn parse_json(&self) -> DataModel;
-// }
 
 impl DataManager {
     pub fn new() -> Self {
         DataManager
     }
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> std::io::Result<()> {
-        // println!("{:?}", args);
         let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel {
             pairs: HashMap::new(),
         });
         match action {
             DataAction::Add => {
-                self.print_rule_info(args);
+                match self.print_rule_info(args) {
+                    Ok(()) => {}
+                    Err(e) => {
+                        eprintln!("Error: {}", e)
+                    }
+                }
                 match self.add_rule_to_json(
                     data,
                     args.source_path.to_string(),
@@ -106,7 +96,7 @@ impl DataManager {
             DataAction::Move => {
                 self.move_dirs(&args.keyword)?;
             }
-            DataAction::Copy => {}
+            DataAction::Import => {}
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
         }
         Ok(())
@@ -192,7 +182,7 @@ impl DataManager {
         source_path: &str,
         keyword: &str,
     ) -> Result<(), io::Error> {
-        // source(current path) validation
+        // source validation
         if let Some(targets) = data.pairs.get_mut(source_path) {
             if targets.contains_key(keyword) {
                 targets.remove(keyword);
@@ -204,7 +194,12 @@ impl DataManager {
             }
 
             if menu::get_yn_input() {
-                self.save_json_data(&data);
+                match self.save_json_data(&data) {
+                    Ok(()) => {}
+                    Err(e) => {
+                        eprintln!("Error: {}", e)
+                    }
+                }
             }
         } else {
             return Err(io::Error::new(
@@ -215,98 +210,95 @@ impl DataManager {
         Ok(())
     }
 
-    // pub fn load_data_file(&self) -> Result<Value, io::Error> {
-    //     let file = File::open("lsty.json")?;
-    //     let mut buffer = String::new();
-    //     let mut reader = io::BufReader::new(file);
-    //     reader.read_to_string(&mut buffer)?;
-
-    //     let data: Value = serde_json::from_str(&buffer)?;
-
-    //     Ok(data)
-    // }
-
     fn move_dirs(&self, keyword: &str) -> io::Result<()> {
         let data: DataModel = self.parse_json_data()?;
-        if keyword != "" {
-            for pair in data.pairs.iter() {
-                let source_path = &pair.0;
-                let target_path = pair
-                    .1
-                    .iter()
-                    .find(|target| target.0 == keyword)
-                    .map(|target| target.1.as_str())
-                    .unwrap_or(&"");
 
-                // checks if source path exists
-                if !target_path.is_empty() {
-                    println!("");
-                    if !Path::new(source_path).exists() {
-                        eprintln!(
-                            "\x1b[0;31m ✘ Source path {} does not exist\x1b[0m",
-                            source_path.yellow()
+        for pair in data.pairs.iter() {
+            let source_path = &pair.0;
+            let target_path = pair
+                .1
+                .iter()
+                .find(|target| target.0 == keyword)
+                .map(|target| target.1.as_str())
+                .unwrap_or(&"");
+
+            if keyword.is_empty() {
+                println!("hihi");
+                continue;
+            }
+
+            if target_path.is_empty() {
+                println!(
+                    "Error: target path which has keyword: '{}' doesn't exist.",
+                    keyword
+                );
+                continue;
+            }
+
+            if !Path::new(source_path).exists() {
+                eprintln!(
+                    "\x1b[0;31m ✘ Source path {} does not exist\x1b[0m",
+                    source_path.yellow()
+                );
+                continue;
+            }
+
+            if !Path::new(target_path).exists() {
+                eprintln!(
+                    "\x1b[0;33m⚠ target path '{}' does not exist. Creating the directory...\x1b[0m",
+                    target_path.yellow()
+                );
+                fs::create_dir_all(&target_path)
+                    .expect("Error: failed to create target directory on disk.");
+            }
+            println!("");
+            println!("SOURCE: {}", source_path.yellow());
+
+            let mut moved_count = 0;
+
+            // generates regex pattern
+            let re = Regex::new(&format!(r"{}", &keyword)).unwrap();
+
+            let entries = fs::read_dir(source_path)?;
+            for entry in entries {
+                let entry = entry?;
+                let item_path = entry.path();
+                let item_name = match item_path.file_name() {
+                    Some(name) => name.to_string_lossy(),
+                    None => continue,
+                };
+                let normalized = item_name.nfc().collect::<String>();
+                if re.is_match(&item_name) {
+                    let new_path = format!("{}/{}", target_path, normalized);
+                    if Path::new(&new_path).exists() {
+                        println!(
+                            "│ \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
+                            item_name
                         );
                         continue;
                     } else {
-                        println!("SOURCE: {}", source_path.yellow());
-                    }
-
-                    if !Path::new(target_path).exists() {
-                        eprintln!(
-                        "\x1b[0;33m⚠ target path '{}' does not exist. Creating the directory...\x1b[0m",
-                        target_path.yellow()
-                    );
-                        fs::create_dir_all(&target_path).expect("fff");
-                    }
-
-                    // generates regex pattern
-                    let re = Regex::new(&format!(r"{}", &keyword)).unwrap();
-                    let mut moved_count = 0;
-
-                    let entries = fs::read_dir(source_path)?;
-                    for entry in entries {
-                        let entry = entry?;
-                        let item_path = entry.path();
-                        let item_name = match item_path.file_name() {
-                            Some(name) => name.to_string_lossy(),
-                            None => continue,
-                        };
-                        let normalized = item_name.nfc().collect::<String>();
-                        if re.is_match(&item_name) {
-                            let new_path = format!("{}/{}", target_path, normalized);
-                            if Path::new(&new_path).exists() {
-                                println!(
-                                "│ \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
-                                item_name
-                            );
-                                continue;
-                            } else {
-                                println!(
-                                    "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
-                                    item_name
-                                );
-                                if item_path.is_dir() {
-                                    fs::create_dir_all(&new_path).expect("");
-                                    self.copy_dir(&item_path, &PathBuf::from(&new_path))
-                                        .expect("");
-                                    fs::remove_dir_all(&item_path).expect("");
-                                } else {
-                                    fs::copy(&item_path, new_path).expect("");
-                                    fs::remove_file(&item_path).expect("");
-                                }
-                            }
-                            moved_count += 1;
+                        println!(
+                            "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
+                            item_name
+                        );
+                        if item_path.is_dir() {
+                            fs::create_dir_all(&new_path).expect("");
+                            self.copy_dir(&item_path, &PathBuf::from(&new_path))
+                                .expect("");
+                            fs::remove_dir_all(&item_path).expect("");
+                        } else {
+                            fs::copy(&item_path, new_path).expect("");
+                            fs::remove_file(&item_path).expect("");
                         }
                     }
-
-                    println!("TARGET: {}", target_path.yellow());
-                    if moved_count == 0 {
-                        println!("No items to move");
-                    }
+                    moved_count += 1;
                 }
             }
-        } else {
-            println!("mmmm")
+
+            println!("TARGET: {}", target_path.yellow());
+            if moved_count == 0 {
+                println!("No items to move");
+            }
         }
         Ok(())
     }
@@ -335,9 +327,9 @@ impl DataManager {
 
         let keyword = &args.keyword;
 
-        println!("┊ - KEYWORD: {}", keyword);
-        println!("┊ - SOURCE : \x1b[4m{:?}\x1b[0m", source_path);
-        println!("┊ - TARGET : └─> \x1b[4m{:?}\x1b[0m", target_path);
+        println!(" KEYWORD: {}", keyword);
+        println!(" SOURCE : \x1b[4m{:?}\x1b[0m", source_path);
+        println!(" TARGET : └─> \x1b[4m{:?}\x1b[0m", target_path);
         println!("");
         Ok(())
     }

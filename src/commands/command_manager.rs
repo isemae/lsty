@@ -3,21 +3,13 @@ use camino::Utf8PathBuf;
 use super::arguments::{Commands, Config, SubArgs};
 use crate::{
     cli::menu::{navigate_menu, MenuAction},
-    data::{
-        data_manager::{self, DataAction, DataManager},
-        model::DataModel,
-    },
+    data::data_manager::{DataAction, DataManager},
 };
-use std::{
-    default,
-    io::{self, Result},
-    path::{Path, PathBuf},
-};
+use std::{io::Result, path::PathBuf};
 
 pub fn process_command(config: &Config) -> Result<()> {
-    let mut action;
     let mut data_manager = DataManager;
-    let mut current_path = std::env::current_dir().unwrap_or(PathBuf::from(""));
+    let current_path = std::env::current_dir().unwrap_or(PathBuf::from(""));
     let default_path = &Utf8PathBuf::from_path_buf(current_path).unwrap_or(Utf8PathBuf::from(""));
 
     match &config.command {
@@ -30,7 +22,6 @@ pub fn process_command(config: &Config) -> Result<()> {
                 source_path: &default_path,
                 target_path,
             };
-            action = DataAction::Add;
             DataManager::match_action(&mut data_manager, DataAction::Add, sub_args)
         }
 
