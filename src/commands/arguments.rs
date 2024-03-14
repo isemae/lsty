@@ -26,7 +26,11 @@ pub enum Commands {
         keyword: Option<String>,
         target_path: Option<Utf8PathBuf>,
     },
-    Scan,
+    Scan {
+        keyword: Option<String>,
+        source_path: Option<Utf8PathBuf>,
+        target_path: Option<Utf8PathBuf>,
+    },
     Copy {
         source_path: Utf8PathBuf,
     },

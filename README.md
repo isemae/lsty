@@ -1,35 +1,54 @@
 # lusty.rs
 
-
+![lusty.png](/Volumes/!!mac/lusty.png)
 
 ## Tidy Up Your Download Folder!
+
 Organize your directories with keyword-target pairs, simplifying your file management process.
-
-다운로드폴더 사진
-your directories keyword-target pair
-
 
 Each pair corresponds to its source, which represents the current shell path. so you'll be working on your shell path always!
 
+## Installation
 
-- Commands:
-lsty add(-a) keyword /target_dir:
-      - adds a new keyword-target directory pair.
-     del(-d) keyword:
-      - Delete the pair associated with the specified keyword.
-     move(-m) <keyword>:
-      - move all files that have <keyword> in its filename, 
-     move(-m):
-      - or you can just move all the files without keyword
+macOS
 
+```
 
-Commands:
-Add (-a) keyword /target_dir:
-Add a new keyword-target directory pair.
-Delete (-d) keyword:
-Delete the pair associated with the specified keyword.
-Move (-m) <keyword>:
-Move all files containing the specified keyword in their filename.
-Move (-m):
-Move all files regardless of keyword presence.
+```
 
+Windows
+
+```
+
+```
+
+Linuxsh
+
+```
+
+```
+
+### Commands
+
+```shell
+# Adds a new keyword-target directory pair.
+lsty add(-a) keyword /target_dir
+
+# Removes the pair associated with the specified keyword.
+     del(-d) <keyword>
+
+# Moves all entries with <keyword> in their names.
+     move(-m) <keyword>
+# Moves all entries from a source path to each respective target path.
+     move(-m)
+# Or you can just move all the entries that is in the data.
+     move -A
+```
+
+###
+
+#### The one who said 'nah just make batch files' last time
+
+### GUI?
+
+![fl_or_tr.png](/Volumes/!!mac/fl_or_tr.png)

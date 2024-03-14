@@ -1,19 +1,16 @@
-use crate::{cli::menu, commands::arguments::SubArgs, data::model::DataModel, Args};
+use crate::{commands::arguments::SubArgs, data::model::DataModel};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use colored::*;
 
-use regex::Regex;
 use serde::ser::Error;
 use std::{
     collections::HashMap,
     env,
-    fs::{self, File},
+    fs::File,
     io::{self, prelude::*},
-    path::{Path, PathBuf},
     process,
 };
-use unicode_normalization::UnicodeNormalization;
 
 pub struct DataManager;
 // pub struct DataManager {
@@ -27,17 +24,18 @@ pub enum DataAction {
     Delete,
     Move,
     Import,
-    Read,
+    Scan,
 }
 
 impl DataManager {
     pub fn new() -> Self {
         DataManager
     }
-    pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> std::io::Result<()> {
+    pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> Result<(), io::Error> {
         let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel {
             pairs: HashMap::new(),
         });
+
         match action {
             DataAction::Add => {
                 match self.print_rule_info(args) {
@@ -90,11 +88,27 @@ impl DataManager {
                     }
                 }
             }
-            DataAction::Read => {
-                self.scan_path(args.source_path);
+            DataAction::Scan => {
+                self.scan_and_validate_path(data);
             }
             DataAction::Move => {
-                self.move_dirs(&args.keyword)?;
+                match &args.keyword.is_empty() {
+                    // true => {
+                    //     // 키워드가 없으면 데이터 내 모든 엔트리를 이동
+                    //     // if keyword == "" {
+                    //     //     pair.1.iter().for_each(|(keyword, path)| {
+                    //     //         println!("k {}, p {}", keyword, path);
+                    //     //         // self.move_entry()
+                    //     //     });
+
+                    //     // 키워드가 있지만 엔트리 이름이 패턴을 포함하지 않으면
+                    //     // }
+                    //     println!("hehe")
+                    // }
+                    _ => {
+                        self.move_dirs(self.scan_and_validate_path(data).unwrap(), &args.keyword)?;
+                    }
+                }
             }
             DataAction::Import => {}
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
@@ -130,194 +144,6 @@ impl DataManager {
         Ok(())
     }
 
-    pub fn add_rule_to_json(
-        &self,
-        mut data: DataModel,
-        source_path: String,
-        target_path: String,
-        keyword: String,
-    ) -> io::Result<()> {
-        let target_path_on_volume = Utf8Path::new(target_path.as_str());
-        if !target_path_on_volume.exists() || !target_path_on_volume.is_dir() {
-            return Err(io::Error::new(
-                io::ErrorKind::NotFound,
-                "no such directory exists.",
-            ));
-        }
-
-        if let Some(pair) = data.pairs.get_mut(&source_path) {
-            if !pair.contains_key(&target_path) && !pair.contains_key(&keyword) {
-                pair.insert(keyword, target_path);
-            } else if pair.contains_key(&keyword) {
-                eprintln!(
-                    "rule for the target '{}' already exists. do you want to change the keyword? (y/N):",
-                    target_path
-                );
-                if menu::get_yn_input() {
-                    pair.insert(keyword, target_path);
-                    println!("rule added.")
-                }
-            } else {
-                eprintln!(
-                    "rule for the keyword '{}' already exists. do you want to change the target? (y/N):",
-                    keyword
-                );
-                if menu::get_yn_input() {
-                    pair.insert(keyword, target_path);
-                    println!("rule added.")
-                }
-            }
-        } else {
-            let mut new_pair = HashMap::new();
-            new_pair.insert(keyword, target_path);
-            data.pairs.insert(source_path, new_pair);
-        }
-        self.save_json_data(&data)?;
-        Ok(())
-    }
-
-    fn remove_rule_from_json(
-        &self,
-        mut data: DataModel,
-        source_path: &str,
-        keyword: &str,
-    ) -> Result<(), io::Error> {
-        // source validation
-        if let Some(targets) = data.pairs.get_mut(source_path) {
-            if targets.contains_key(keyword) {
-                targets.remove(keyword);
-            } else {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "no such keyword rule for the current path",
-                ));
-            }
-
-            if menu::get_yn_input() {
-                match self.save_json_data(&data) {
-                    Ok(()) => {}
-                    Err(e) => {
-                        eprintln!("Error: {}", e)
-                    }
-                }
-            }
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::NotFound,
-                "no rule for the current path in the data",
-            ));
-        }
-        Ok(())
-    }
-
-    fn move_dirs(&self, keyword: &str) -> io::Result<()> {
-        let data: DataModel = self.parse_json_data()?;
-
-        for pair in data.pairs.iter() {
-            let source_path = &pair.0;
-            let target_path = pair
-                .1
-                .iter()
-                .find(|target| target.0 == keyword)
-                .map(|target| target.1.as_str())
-                .unwrap_or(&"");
-
-            if keyword.is_empty() {
-                println!("hihi");
-                continue;
-            }
-
-            if target_path.is_empty() {
-                println!(
-                    "Error: target path which has keyword: '{}' doesn't exist.",
-                    keyword
-                );
-                continue;
-            }
-
-            if !Path::new(source_path).exists() {
-                eprintln!(
-                    "\x1b[0;31m ✘ Source path {} does not exist\x1b[0m",
-                    source_path.yellow()
-                );
-                continue;
-            }
-
-            if !Path::new(target_path).exists() {
-                eprintln!(
-                    "\x1b[0;33m⚠ target path '{}' does not exist. Creating the directory...\x1b[0m",
-                    target_path.yellow()
-                );
-                fs::create_dir_all(&target_path)
-                    .expect("Error: failed to create target directory on disk.");
-            }
-            println!("");
-            println!("SOURCE: {}", source_path.yellow());
-
-            let mut moved_count = 0;
-
-            // generates regex pattern
-            let re = Regex::new(&format!(r"{}", &keyword)).unwrap();
-
-            let entries = fs::read_dir(source_path)?;
-            for entry in entries {
-                let entry = entry?;
-                let item_path = entry.path();
-                let item_name = match item_path.file_name() {
-                    Some(name) => name.to_string_lossy(),
-                    None => continue,
-                };
-                let normalized = item_name.nfc().collect::<String>();
-                if re.is_match(&item_name) {
-                    let new_path = format!("{}/{}", target_path, normalized);
-                    if Path::new(&new_path).exists() {
-                        println!(
-                            "│ \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
-                            item_name
-                        );
-                        continue;
-                    } else {
-                        println!(
-                            "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
-                            item_name
-                        );
-                        if item_path.is_dir() {
-                            fs::create_dir_all(&new_path).expect("");
-                            self.copy_dir(&item_path, &PathBuf::from(&new_path))
-                                .expect("");
-                            fs::remove_dir_all(&item_path).expect("");
-                        } else {
-                            fs::copy(&item_path, new_path).expect("");
-                            fs::remove_file(&item_path).expect("");
-                        }
-                    }
-                    moved_count += 1;
-                }
-            }
-
-            println!("TARGET: {}", target_path.yellow());
-            if moved_count == 0 {
-                println!("No items to move");
-            }
-        }
-        Ok(())
-    }
-
-    fn copy_dir(&self, src: &PathBuf, trg: &PathBuf) -> std::io::Result<()> {
-        for entry in fs::read_dir(src)? {
-            let entry = entry?;
-            let file_path = entry.path();
-            let file_name = file_path.file_name().unwrap().to_str().unwrap();
-            let new_path = trg.join(file_name);
-            if file_path.is_dir() {
-                fs::create_dir_all(&new_path)?;
-                self.copy_dir(&file_path, &new_path)?;
-            } else {
-                fs::copy(&file_path, &new_path).expect("");
-            }
-        }
-        Ok(())
-    }
     fn print_rule_info(&self, args: &SubArgs) -> io::Result<()> {
         let mut source_path = Utf8PathBuf::new();
         let mut target_path = Utf8PathBuf::new();
@@ -333,6 +159,4 @@ impl DataManager {
         println!("");
         Ok(())
     }
-
-    fn scan_path(&mut self, path: &Utf8PathBuf) {}
 }

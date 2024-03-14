@@ -42,10 +42,23 @@ pub fn process_command(config: &Config) -> Result<()> {
                 source_path: &default_path,
                 target_path: target_path.as_ref().unwrap_or(default_path),
             };
-            DataManager::match_action(&mut data_manager, DataAction::Move, &sub_args)
+            DataManager::match_action(&mut data_manager, DataAction::Move, &sub_args);
+            Ok(())
         }
         //
-        Commands::Scan {} => Ok(()),
+        Commands::Scan {
+            keyword,
+            source_path,
+            target_path,
+        } => {
+            let sub_args = &SubArgs {
+                keyword: keyword.clone().unwrap_or_default(),
+                source_path: &default_path,
+                target_path: target_path.as_ref().unwrap_or(default_path),
+            };
+            DataManager::match_action(&mut data_manager, DataAction::Scan, &sub_args);
+            Ok(())
+        }
 
         Commands::List => {
             navigate_menu(MenuAction::Default);
