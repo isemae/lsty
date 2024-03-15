@@ -1,6 +1,7 @@
 use crate::data::{data_manager::DataManager, model::DataModel};
 use regex::Regex;
 
+use std::fs::DirEntry;
 use std::{collections::HashMap, io};
 use std::{
     env::current_dir,
@@ -10,76 +11,103 @@ use std::{
 use unicode_normalization::UnicodeNormalization;
 
 impl DataManager {
-    pub fn move_dirs(&self, map: HashMap<String, String>, keyword: &str) -> Result<(), io::Error> {
-        let mut moved_count = 0;
-        // println!("map: {:?}", map);
-        let current_dir = current_dir()?;
-        let target_path = map.get(keyword);
-        let mut keywords = Vec::new();
+    pub fn normalize_entry(&self, entry: &DirEntry) -> String {
+        let entry_path = entry.path();
+        let entry_name = match entry_path.file_name() {
+            Some(name) => name,
+            None => return String::new(),
+        };
+        entry_name.to_string_lossy().nfc().collect::<String>()
+    }
 
-        if keyword.is_empty() {
-            keywords = map.keys().cloned().collect();
-        } else {
-            keywords.push(keyword.to_owned());
+    fn generate_new_entry(
+        &self,
+        entry_name: String,
+        map: HashMap<String, String>,
+    ) -> Option<String> {
+        let mut new_entry = String::new();
+        for (kw, target) in map {
+            let re = Regex::new(&kw).unwrap();
+            if re.is_match(&entry_name) {
+                // new_map.insert(entry_name, target.clone());
+                return Some(format!("{}/{}", target, entry_name));
+            }
         }
+        // println!("{}", new_entry);
+        None
+    }
 
-        println!("keywords: {:?}", keywords);
+    pub fn move_dirs(
+        &self,
+        map: HashMap<String, String>,
+        keyword: String,
+    ) -> Result<(), io::Error> {
+        let mut moved_count = 0;
+        let current_dir = current_dir()?;
+        let entries = fs::read_dir(&current_dir)?;
 
         println!("");
         println!("SOURCE: {:?}", current_dir);
 
-        // generates regex pattern
-        let pattern = keywords.join("|");
-        let re = Regex::new(&pattern).unwrap();
+        for e in entries {
+            let entry = e?;
+            let entry_path = entry.path();
+            let normalized = self.normalize_entry(&entry);
 
-        // 소스경로 내 모든 엔트리
-        let entries = fs::read_dir(current_dir)?;
-        let filtered_entries: Vec<_> = entries
-            .filter_map(|e| {
-                let entry = e.ok()?;
-                let path = entry.path();
-                let entry_name_normalized = match path.file_name() {
-                    Some(name) => name.to_string_lossy().nfc().collect::<String>(),
-                    None => return None,
-                };
-
-                if re.is_match(&entry_name_normalized) {
-                    Some(path)
-                } else {
-                    None
+            let new_entry = self
+                .generate_new_entry(normalized.clone(), map.clone())
+                .unwrap_or_default();
+            let mut entry_symbol = "";
+            match fs::metadata(&entry_path) {
+                Ok(metadata) => {
+                    if metadata.is_dir() {
+                        entry_symbol = "📁"
+                    } else {
+                        entry_symbol = "📄"
+                    }
                 }
-            })
-            .collect();
-
-        for entry in filtered_entries {
-            println!("found {}", entry.display())
+                Err(_) => {}
+            }
+            if !new_entry.is_empty() {
+                match Path::new(&new_entry).exists() {
+                    true => {
+                        println!(
+                            "[!] \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
+                            new_entry
+                        );
+                        continue;
+                    }
+                    false => {
+                        println!(
+                            "[\x1b[0;32mM\x1b[0m] {} {} \n\
+                            \r └→ \x1b[4m{}\x1b[0m\x1b[0m",
+                            entry_symbol, normalized, new_entry
+                        );
+                        self.move_entry(entry_path, new_entry);
+                        moved_count += 1;
+                    }
+                }
+            }
         }
-        //     // 정규화된 키워드를 파일명으로 포함하는 엔트리
-        // let new_entry = format!("{:?}/{:?}", target_path, filtered_entry);
 
-        //     // 엔트리가 이미 존재하는 파일인지
-        //     if validates_path(&new_entry) {
-        //         println!(
-        //             "│ \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
-        //             entry_name_normalized
-        //         );
-        //         continue;
-        //     }
-
-        //     println!(
-        //         "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
-        //         entry_name_normalized
-        //     );
-
-        //     self.move_entry(entry.path(), new_entry);
-        //     moved_count += 1;
+        //// 특정키워드만 / 일괄
+        // if keyword.is_empty() {
+        //     keywords = map.keys().cloned().collect();
+        // } else {
+        //     keywords.push(keyword.to_owned());
         // }
 
-        println!("└→ TARGET: {:?}", target_path);
-        if moved_count == 0 {
-            println!("No items to move");
-        }
+        // if validates_path(&new_entry) {
+        //     println!(
+        //         "│ \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
+        //         entry_name_normalized
+        //     );
+        //     continue;
+        // }
 
+        if moved_count == 0 {
+            println!("{} source path is clean. No items to move", "[✓]");
+        }
         Ok(())
     }
 
@@ -116,43 +144,7 @@ impl DataManager {
 }
 
 // fn validates_pair(source_path: &str, target_path: &str) -> Option<Result<(), io::Error>> {
-//     if !Path::new(source_path).exists() {
-//         eprintln!(
-//             "\x1b[0;31m ✘ Source path {} is not a valid path.\x1b[0m",
-//             source_path.yellow()
-//         );
-//         return Some(Err(io::Error::new(
-//             io::ErrorKind::NotFound,
-//             "no such directory exists.",
-//         )));
-//     }
-//     if !Path::new(target_path).exists() {
-//         eprintln!(
-//             "\x1b[0;33m⚠ target path '{}' doesn't exist. Creating the directory...\x1b[0m",
-//             target_path.yellow()
-//         );
-//         fs::create_dir_all(&target_path)
-//             .expect("Error: failed to create target directory on disk.");
-//     }
-//     None
-// }
-// match Path::new(&new_entry).exists() {
-//     true => {
-//         println!(
-//             "│ \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
-//             entry_name_normalized
-//         );
-//         continue;
-//     }
-//     false => {
-//         println!(
-//             "│\x1b[0;32m MOVE:\x1b[0m  \x1b[4m{}\x1b[0m\x1b[0m",
-//             entry_name_normalized
-//         );
-
-//         self.move_entry(entry_path, new_entry);
-//         moved_count += 1;
-//     }
+//
 // }
 
 // fn validates_path(path: &str) -> Result<(), io::Error> {

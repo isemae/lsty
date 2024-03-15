@@ -106,7 +106,10 @@ impl DataManager {
                     //     println!("hehe")
                     // }
                     _ => {
-                        self.move_dirs(self.scan_and_validate_path(data).unwrap(), &args.keyword)?;
+                        self.move_dirs(
+                            self.scan_and_validate_path(data).unwrap(),
+                            args.keyword.clone(),
+                        )?;
                     }
                 }
             }
