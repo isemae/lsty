@@ -1,4 +1,7 @@
-use crate::data::{data_manager::DataManager, model::DataModel};
+use crate::{
+    cli::menu,
+    data::{data_manager::DataManager, model::DataModel},
+};
 use regex::Regex;
 
 use std::fs::DirEntry;
@@ -20,21 +23,29 @@ impl DataManager {
         entry_name.to_string_lossy().nfc().collect::<String>()
     }
 
-    fn generate_new_entry(
+    fn generate_new_entries(
         &self,
-        entry_name: String,
         map: HashMap<String, String>,
-    ) -> Option<String> {
-        let mut new_entry = String::new();
-        for (kw, target) in map {
-            let re = Regex::new(&kw).unwrap();
-            if re.is_match(&entry_name) {
-                // new_map.insert(entry_name, target.clone());
-                return Some(format!("{}/{}", target, entry_name));
+    ) -> Result<HashMap<String, Vec<String>>, io::Error> {
+        let current_dir = current_dir()?;
+        let entries = fs::read_dir(&current_dir)?;
+        let mut entry_map = HashMap::new();
+
+        for entry in entries {
+            let entry = entry?;
+
+            for (kw, target) in &map {
+                let re = Regex::new(kw).unwrap();
+                let normalized = self.normalize_entry(&entry);
+                if re.is_match(&normalized) {
+                    entry_map
+                        .entry(target.to_string())
+                        .or_insert_with(Vec::new)
+                        .push(normalized)
+                }
             }
         }
-        // println!("{}", new_entry);
-        None
+        Ok(entry_map)
     }
 
     pub fn move_dirs(
@@ -44,79 +55,61 @@ impl DataManager {
     ) -> Result<(), io::Error> {
         let mut moved_count = 0;
         let current_dir = current_dir()?;
-        let entries = fs::read_dir(&current_dir)?;
-
+        let entries_map = self.generate_new_entries(map.clone())?;
         println!("");
-        println!("SOURCE: {:?}", current_dir);
+        println!("SOURCE: {}", current_dir.display());
+        for (target, vec) in entries_map {
+            println!("\r└→ \x1b[4m{}\x1b[0m\x1b[0m", target);
+            for entry in vec.clone() {
+                let new_entry = format!("{}/{}", target, entry);
 
-        for e in entries {
-            let entry = e?;
-            let entry_path = entry.path();
-            let normalized = self.normalize_entry(&entry);
-
-            let new_entry = self
-                .generate_new_entry(normalized.clone(), map.clone())
-                .unwrap_or_default();
-            let mut entry_symbol = "";
-            match fs::metadata(&entry_path) {
-                Ok(metadata) => {
-                    if metadata.is_dir() {
-                        entry_symbol = "📁"
-                    } else {
-                        entry_symbol = "📄"
+                let mut entry_symbol = "";
+                match fs::metadata(&entry) {
+                    Ok(metadata) => {
+                        if metadata.is_dir() {
+                            entry_symbol = "📁"
+                        } else {
+                            entry_symbol = "📄"
+                        }
                     }
+                    Err(_) => {}
                 }
-                Err(_) => {}
-            }
-            if !new_entry.is_empty() {
-                match Path::new(&new_entry).exists() {
-                    true => {
-                        println!(
-                            "[!] \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
-                            new_entry
-                        );
-                        continue;
-                    }
-                    false => {
-                        println!(
-                            "[\x1b[0;32mM\x1b[0m] {} {} \n\
-                            \r └→ \x1b[4m{}\x1b[0m\x1b[0m",
-                            entry_symbol, normalized, new_entry
-                        );
-                        self.move_entry(entry_path, new_entry);
-                        moved_count += 1;
+
+                if !new_entry.is_empty() {
+                    match Path::new(&new_entry).exists() {
+                        true => {
+                            println!(
+                                "  \x1b[0;33m[{}]\x1b[0m {} {} already exists in the target directory.",
+                                "!", entry_symbol, entry
+                            );
+                            continue;
+                        }
+                        false => {
+                            self.scan_and_validate_path(map.clone()).unwrap();
+                            println!("  \x1b[0;32m{}\x1b[0m {} {}", "[✓]", entry_symbol, entry,);
+                            self.move_entry(entry, new_entry);
+                            moved_count += 1;
+                        }
                     }
                 }
             }
+            println!("");
         }
-
-        //// 특정키워드만 / 일괄
-        // if keyword.is_empty() {
-        //     keywords = map.keys().cloned().collect();
-        // } else {
-        //     keywords.push(keyword.to_owned());
-        // }
-
-        // if validates_path(&new_entry) {
-        //     println!(
-        //         "│ \x1b[0;31mEXIST:\x1b[0m {} already exists in the target directory.",
-        //         entry_name_normalized
-        //     );
-        //     continue;
-        // }
-
         if moved_count == 0 {
-            println!("{} source path is clean. No items to move", "[✓]");
+            println!("{} No items to move in the source path.", "[✓]");
         }
         Ok(())
     }
 
-    fn move_entry(&self, entry_path: PathBuf, new_entry: String) {
-        match entry_path.is_dir() {
+    fn move_entry(&self, entry_path: String, new_entry: String) {
+        match PathBuf::from(entry_path.clone()).is_dir() {
             true => {
                 fs::create_dir_all(&new_entry).expect("");
-                self.copy_dir(&entry_path, &PathBuf::from(&new_entry))
-                    .expect("");
+                self.copy_dir(
+                    &PathBuf::from(entry_path.clone()),
+                    &PathBuf::from(&new_entry),
+                )
+                .expect("");
                 fs::remove_dir_all(&entry_path).expect("");
             }
             false => {

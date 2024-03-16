@@ -9,6 +9,7 @@ use std::{
     env,
     fs::File,
     io::{self, prelude::*},
+    path::{Path, PathBuf},
     process,
 };
 
@@ -35,6 +36,7 @@ impl DataManager {
         let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel {
             pairs: HashMap::new(),
         });
+        let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from(""));
 
         match action {
             DataAction::Add => {
@@ -89,28 +91,11 @@ impl DataManager {
                 }
             }
             DataAction::Scan => {
-                self.scan_and_validate_path(data);
+                // self.scan_and_validate_path(data);
             }
             DataAction::Move => {
-                match &args.keyword.is_empty() {
-                    // true => {
-                    //     // 키워드가 없으면 데이터 내 모든 엔트리를 이동
-                    //     // if keyword == "" {
-                    //     //     pair.1.iter().for_each(|(keyword, path)| {
-                    //     //         println!("k {}, p {}", keyword, path);
-                    //     //         // self.move_entry()
-                    //     //     });
-
-                    //     // 키워드가 있지만 엔트리 이름이 패턴을 포함하지 않으면
-                    //     // }
-                    //     println!("hehe")
-                    // }
-                    _ => {
-                        self.move_dirs(
-                            self.scan_and_validate_path(data).unwrap(),
-                            args.keyword.clone(),
-                        )?;
-                    }
+                if let Some(pair) = data.pairs.get(&current_dir.to_string_lossy().to_string()) {
+                    self.move_dirs(pair.to_owned(), args.keyword.clone())?;
                 }
             }
             DataAction::Import => {}

@@ -20,7 +20,7 @@ pub fn process_command(config: &Config) -> Result<()> {
             let sub_args = &SubArgs {
                 keyword: keyword.to_string(),
                 source_path: &default_path,
-                target_path,
+                target_path: &target_path.clone().unwrap_or(Utf8PathBuf::from("")),
             };
             DataManager::match_action(&mut data_manager, DataAction::Add, sub_args)
         }

@@ -10,9 +10,15 @@ impl DataManager {
         &self,
         mut data: DataModel,
         source_path: String,
-        target_path: String,
+        mut target_path: String,
         keyword: String,
     ) -> io::Result<()> {
+        if !target_path.is_empty() {
+            target_path = target_path
+        } else {
+            target_path = format!("./{}", &keyword);
+        }
+
         let target_path_on_volume = Utf8Path::new(target_path.as_str());
         if !target_path_on_volume.exists() || !target_path_on_volume.is_dir() {
             return Err(io::Error::new(

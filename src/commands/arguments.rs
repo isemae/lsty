@@ -14,7 +14,7 @@ pub enum Commands {
     #[command(alias = "-a")]
     Add {
         keyword: String,
-        target_path: Utf8PathBuf,
+        target_path: Option<Utf8PathBuf>,
     },
     #[command(alias = "-d")]
     Del {
