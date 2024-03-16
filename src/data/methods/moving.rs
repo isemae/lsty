@@ -25,7 +25,7 @@ impl DataManager {
 
     fn generate_new_entries(
         &self,
-        map: HashMap<String, String>,
+        map: &HashMap<String, String>,
         keyword: &str,
     ) -> Result<HashMap<String, Vec<String>>, io::Error> {
         let current_dir = current_dir()?;
@@ -63,25 +63,14 @@ impl DataManager {
     pub fn move_dirs(&self, map: &HashMap<String, String>, keyword: &str) -> Result<(), io::Error> {
         let mut moved_count = 0;
         let current_dir = current_dir()?;
-        let entries_map = self.generate_new_entries(map.clone(), keyword)?;
+        let entries_map = self.generate_new_entries(map, keyword)?;
         println!("");
         println!("SOURCE: {}", current_dir.display());
         for (target, vec) in entries_map {
             println!("\r└→ \x1b[4m{}\x1b[0m\x1b[0m", target);
             for entry in vec.clone() {
                 let new_entry = format!("{}/{}", target, entry);
-
-                let mut entry_symbol = "";
-                match fs::metadata(&entry) {
-                    Ok(metadata) => {
-                        if metadata.is_dir() {
-                            entry_symbol = "📁"
-                        } else {
-                            entry_symbol = "📄"
-                        }
-                    }
-                    Err(_) => {}
-                }
+                let entry_symbol = menu::entry_symbol(&entry);
 
                 if !new_entry.is_empty() {
                     match Path::new(&new_entry).exists() {
@@ -93,7 +82,7 @@ impl DataManager {
                             continue;
                         }
                         false => {
-                            self.scan_and_validate_path(map.clone()).unwrap();
+                            self.scan_and_validate_path(map).unwrap();
                             println!("  \x1b[0;32m{}\x1b[0m {} {}", "[✓]", entry_symbol, entry,);
                             self.move_entry(entry, new_entry);
                             moved_count += 1;

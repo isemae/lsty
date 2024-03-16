@@ -5,6 +5,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
 };
+use std::path::Path;
 
 pub enum MenuAction {
     Default,
@@ -137,6 +138,20 @@ fn print_submenu(submenu: &[&str], cursor_x: usize) {
         }
     }
     println!("\r");
+}
+
+pub fn entry_symbol<T: AsRef<Path>>(entry: T) -> String {
+    let entry = entry.as_ref();
+    match entry.metadata() {
+        Ok(metadata) => {
+            if metadata.is_dir() {
+                "📁".to_string()
+            } else {
+                "📄".to_string()
+            }
+        }
+        Err(_) => "".to_string(),
+    }
 }
 
 pub fn get_yn_input() -> bool {

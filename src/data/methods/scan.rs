@@ -4,7 +4,7 @@ use std::{collections::HashMap, env::current_dir, fs, path::PathBuf};
 impl DataManager {
     pub fn scan_and_validate_path(
         &self,
-        pair: HashMap<String, String>,
+        pair: &HashMap<String, String>,
     ) -> Option<HashMap<String, String>> {
         let current_dir = current_dir().unwrap_or_else(|_| PathBuf::from(""));
 
