@@ -26,36 +26,44 @@ impl DataManager {
     fn generate_new_entries(
         &self,
         map: HashMap<String, String>,
+        keyword: &str,
     ) -> Result<HashMap<String, Vec<String>>, io::Error> {
         let current_dir = current_dir()?;
         let entries = fs::read_dir(&current_dir)?;
-        let mut entry_map = HashMap::new();
+        let mut entry_map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut patterns = HashMap::new();
 
         for entry in entries {
             let entry = entry?;
+            let entry_name = self.normalize_entry(&entry);
 
-            for (kw, target) in &map {
-                let re = Regex::new(kw).unwrap();
-                let normalized = self.normalize_entry(&entry);
-                if re.is_match(&normalized) {
-                    entry_map
-                        .entry(target.to_string())
-                        .or_insert_with(Vec::new)
-                        .push(normalized)
+            let keywords = if !keyword.is_empty() {
+                vec![keyword.to_string()]
+            } else {
+                map.keys().cloned().collect()
+            };
+
+            for kw in &keywords {
+                let pattern = patterns
+                    .entry(kw.clone())
+                    .or_insert_with(|| Regex::new(&kw).unwrap());
+                if let Some(target) = map.get(kw) {
+                    if pattern.is_match(&entry_name) {
+                        entry_map
+                            .entry(target.to_string())
+                            .or_default()
+                            .push(entry_name.clone())
+                    }
                 }
             }
         }
         Ok(entry_map)
     }
 
-    pub fn move_dirs(
-        &self,
-        map: HashMap<String, String>,
-        keyword: String,
-    ) -> Result<(), io::Error> {
+    pub fn move_dirs(&self, map: &HashMap<String, String>, keyword: &str) -> Result<(), io::Error> {
         let mut moved_count = 0;
         let current_dir = current_dir()?;
-        let entries_map = self.generate_new_entries(map.clone())?;
+        let entries_map = self.generate_new_entries(map.clone(), keyword)?;
         println!("");
         println!("SOURCE: {}", current_dir.display());
         for (target, vec) in entries_map {

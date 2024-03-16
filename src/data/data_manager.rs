@@ -94,8 +94,8 @@ impl DataManager {
                 // self.scan_and_validate_path(data);
             }
             DataAction::Move => {
-                if let Some(pair) = data.pairs.get(&current_dir.to_string_lossy().to_string()) {
-                    self.move_dirs(pair.to_owned(), args.keyword.clone())?;
+                if let Some(pair) = data.pairs.get(current_dir.to_str().unwrap_or_default()) {
+                    self.move_dirs(pair, args.keyword.as_str())?;
                 }
             }
             DataAction::Import => {}
