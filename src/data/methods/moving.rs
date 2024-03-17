@@ -1,6 +1,9 @@
 use crate::{
     cli::menu,
-    data::{data_manager::DataManager, model::DataModel},
+    data::{
+        data_manager::DataManager,
+        model::{DataModel, DataObject},
+    },
 };
 use regex::Regex;
 
@@ -25,7 +28,7 @@ impl DataManager {
 
     fn generate_new_entries(
         &self,
-        map: &HashMap<String, String>,
+        target_map: &HashMap<String, String>,
         keyword: &str,
     ) -> Result<HashMap<String, Vec<String>>, io::Error> {
         let current_dir = current_dir()?;
@@ -40,14 +43,14 @@ impl DataManager {
             let keywords = if !keyword.is_empty() {
                 vec![keyword.to_string()]
             } else {
-                map.keys().cloned().collect()
+                target_map.keys().cloned().collect()
             };
 
             for kw in &keywords {
                 let pattern = patterns
                     .entry(kw.clone())
                     .or_insert_with(|| Regex::new(&kw).unwrap());
-                if let Some(target) = map.get(kw) {
+                if let Some(target) = target_map.get(kw) {
                     if pattern.is_match(&entry_name) {
                         entry_map
                             .entry(target.to_string())
@@ -60,10 +63,14 @@ impl DataManager {
         Ok(entry_map)
     }
 
-    pub fn move_dirs(&self, map: &HashMap<String, String>, keyword: &str) -> Result<(), io::Error> {
+    pub fn move_dirs(
+        &self,
+        target_map: &HashMap<String, String>,
+        keyword: &str,
+    ) -> Result<(), io::Error> {
         let mut moved_count = 0;
         let current_dir = current_dir()?;
-        let entries_map = self.generate_new_entries(map, keyword)?;
+        let entries_map = self.generate_new_entries(target_map, keyword)?;
         println!("");
         println!("SOURCE: {}", current_dir.display());
         for (target, vec) in entries_map {
@@ -82,7 +89,7 @@ impl DataManager {
                             continue;
                         }
                         false => {
-                            self.scan_and_validate_path(map).unwrap();
+                            self.scan_and_validate_path(target_map).unwrap();
                             println!("  \x1b[0;32m{}\x1b[0m {} {}", "[✓]", entry_symbol, entry,);
                             self.move_entry(entry, new_entry);
                             moved_count += 1;

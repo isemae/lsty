@@ -120,7 +120,7 @@ fn print_stage(
 }
 
 fn print_menu(menu: &DataModel, cursor_y: usize) {
-    for (i, source) in menu.pairs.iter().enumerate() {
+    for (i, source) in menu.data.iter().enumerate() {
         if i == cursor_y {
             println!("> {:?} \r", source);
         } else {

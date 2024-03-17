@@ -1,6 +1,9 @@
 use crate::{
     cli::menu,
-    data::{data_manager::DataManager, model::DataModel},
+    data::{
+        data_manager::DataManager,
+        model::{DataModel, DataObject},
+    },
 };
 use std::io;
 
@@ -12,9 +15,13 @@ impl DataManager {
         keyword: &str,
     ) -> Result<(), io::Error> {
         // source validation
-        if let Some(targets) = data.pairs.get_mut(source_path) {
-            if targets.contains_key(keyword) {
-                targets.remove(keyword);
+        if let Some(obj) = data
+            .data
+            .iter_mut()
+            .find(|obj| obj.sources.contains(&source_path.to_string()))
+        {
+            if obj.targets.contains_key(keyword) {
+                obj.targets.remove(keyword);
             } else {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,

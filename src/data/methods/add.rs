@@ -27,16 +27,20 @@ impl DataManager {
             ));
         }
 
-        if let Some(pair) = data.pairs.get_mut(&source_path) {
-            if !pair.contains_key(&target_path) && !pair.contains_key(&keyword) {
-                pair.insert(keyword, target_path);
-            } else if pair.contains_key(&keyword) {
+        if let Some(obj) = data
+            .data
+            .iter_mut()
+            .find(|o| o.sources.contains(&source_path))
+        {
+            if !obj.targets.contains_key(&target_path) && !obj.targets.contains_key(&keyword) {
+                obj.targets.insert(keyword, target_path);
+            } else if obj.targets.contains_key(&keyword) {
                 eprintln!(
                   "rule for the target '{}' already exists. do you want to change the keyword? (y/N):",
                   target_path
               );
                 if menu::get_yn_input() {
-                    pair.insert(keyword, target_path);
+                    obj.targets.insert(keyword, target_path);
                     println!("rule added.")
                 }
             } else {
@@ -45,14 +49,16 @@ impl DataManager {
                   keyword
               );
                 if menu::get_yn_input() {
-                    pair.insert(keyword, target_path);
+                    obj.targets.insert(keyword, target_path);
                     println!("rule added.")
                 }
             }
         } else {
-            let mut new_pair = HashMap::new();
-            new_pair.insert(keyword, target_path);
-            data.pairs.insert(source_path, new_pair);
+            // let mut new_sources = Vec::new();
+            let mut new_target_map = HashMap::new();
+            new_target_map.insert(keyword, target_path);
+
+            // data.data.append(other).push(new_sources, new_target_map);
         }
         self.save_json_data(&data)?;
         Ok(())

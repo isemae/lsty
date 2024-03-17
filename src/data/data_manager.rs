@@ -33,9 +33,9 @@ impl DataManager {
         DataManager
     }
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> Result<(), io::Error> {
-        let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel {
-            pairs: HashMap::new(),
-        });
+        let mut data = self
+            .parse_json_data()
+            .unwrap_or_else(|_| DataModel { data: Vec::new() });
         let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from(""));
 
         match action {
@@ -75,15 +75,19 @@ impl DataManager {
                             eprintln!("Error: {}", e);
                             println!(
                                 "keywords available for current path: \n '{}'",
-                                if let Some(pair) = data.pairs.get_mut(args.source_path.as_str()) {
-                                    pair.iter()
+                                if let Some(obj) = data
+                                    .data
+                                    .iter()
+                                    .find(|o| o.sources.contains(&args.source_path.to_string()))
+                                {
+                                    obj.targets
+                                        .iter()
                                         .map(|(k, _)| k.clone())
                                         .collect::<Vec<_>>()
                                         .join("', '")
                                 } else {
                                     "".to_string()
                                 }
-                                .yellow()
                             );
                             process::exit(1);
                         }
@@ -94,8 +98,11 @@ impl DataManager {
                 // self.scan_and_validate_path(data);
             }
             DataAction::Move => {
-                if let Some(pair) = data.pairs.get(current_dir.to_str().unwrap_or_default()) {
-                    self.move_dirs(pair, args.keyword.as_str())?;
+                if let Some(target_map) = data.data.iter_mut().find(|obj| {
+                    obj.sources
+                        .contains(&current_dir.to_string_lossy().to_string())
+                }) {
+                    self.move_dirs(&target_map.targets, args.keyword.as_str())?;
                 }
             }
             DataAction::Import => {}
@@ -142,8 +149,8 @@ impl DataManager {
         let keyword = &args.keyword;
 
         println!(" KEYWORD: {}", keyword);
-        println!(" SOURCE : \x1b[4m{:?}\x1b[0m", source_path);
-        println!(" TARGET : └─> \x1b[4m{:?}\x1b[0m", target_path);
+        println!(" SOURCE : \x1b[4m{}\x1b[0m", source_path);
+        println!(" TARGET : └─> \x1b[4m{}\x1b[0m", target_path);
         println!("");
         Ok(())
     }

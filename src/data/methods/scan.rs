@@ -1,4 +1,7 @@
-use crate::data::{data_manager::DataManager, model::DataModel};
+use crate::data::{
+    data_manager::DataManager,
+    model::{DataModel, DataObject},
+};
 use std::{collections::HashMap, env::current_dir, fs, path::PathBuf};
 
 impl DataManager {
@@ -10,7 +13,7 @@ impl DataManager {
 
         let mut valid_pair = HashMap::new();
 
-        for map in pair {
+        for map in pair.iter() {
             if !PathBuf::from(&map.1).exists() {
                 eprintln!(
                             " \x1b[0;33m[!] target path '{}' doesn't exist. Creating the directory...\x1b[0m",
