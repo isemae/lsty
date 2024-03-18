@@ -1,4 +1,7 @@
-use crate::{commands::arguments::SubArgs, data::model::DataModel};
+use crate::{
+    commands::arguments::{Commands, SubArgs},
+    data::model::DataModel,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use colored::*;
@@ -9,8 +12,10 @@ use std::{
     env,
     fs::File,
     io::{self, prelude::*},
+    ops::Deref,
     path::{Path, PathBuf},
     process,
+    str::FromStr,
 };
 
 pub struct DataManager;
@@ -24,8 +29,20 @@ pub enum DataAction {
     Add,
     Delete,
     Move,
-    Import,
+    Copy,
     Scan,
+    Default,
+}
+
+impl From<&Commands> for DataAction {
+    fn from(c: &Commands) -> Self {
+        match c {
+            Commands::Add { .. } => DataAction::Add,
+            Commands::Del { .. } => DataAction::Delete,
+            Commands::Copy { .. } => DataAction::Copy,
+            _ => DataAction::Default,
+        }
+    }
 }
 
 impl DataManager {
@@ -48,7 +65,6 @@ impl DataManager {
                 }
                 match self.add_rule_to_json(
                     data,
-                    args.source_path.to_string(),
                     args.target_path.to_string(),
                     args.keyword.clone(),
                 ) {
@@ -81,8 +97,8 @@ impl DataManager {
                                     .find(|o| o.sources.contains(&args.source_path.to_string()))
                                 {
                                     obj.targets
-                                        .iter()
-                                        .map(|(k, _)| k.clone())
+                                        .keys()
+                                        .map(|k| k.clone())
                                         .collect::<Vec<_>>()
                                         .join("', '")
                                 } else {
@@ -95,7 +111,7 @@ impl DataManager {
                 }
             }
             DataAction::Scan => {
-                // self.scan_and_validate_path(data);
+                // self.scan_and_validate_path(data.data);
             }
             DataAction::Move => {
                 if let Some(target_map) = data.data.iter_mut().find(|obj| {
@@ -105,7 +121,9 @@ impl DataManager {
                     self.move_dirs(&target_map.targets, args.keyword.as_str())?;
                 }
             }
-            DataAction::Import => {}
+            DataAction::Copy => {
+                self.copy_rule(data, args.target_path.to_string());
+            }
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
         }
         Ok(())
@@ -144,7 +162,7 @@ impl DataManager {
         let mut target_path = Utf8PathBuf::new();
 
         source_path.push(args.source_path);
-        target_path.push(args.target_path);
+        target_path.push(args.target_path.clone());
 
         let keyword = &args.keyword;
 

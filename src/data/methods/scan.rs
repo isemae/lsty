@@ -26,7 +26,7 @@ impl DataManager {
                 valid_pair.insert(map.0.clone(), map.1.clone());
             }
         }
-        return Some(valid_pair);
+        Some(valid_pair)
     }
     // None
 }

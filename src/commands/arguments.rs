@@ -1,7 +1,9 @@
+use crate::data::data_manager::{DataAction, DataManager};
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
-
 use serde::{Deserialize, Serialize};
+use std::io;
+use strum_macros::{EnumString, VariantNames};
 
 #[derive(Parser, Debug)]
 pub struct Config {
@@ -9,19 +11,23 @@ pub struct Config {
     pub command: Commands,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, EnumString, VariantNames)]
+#[strum(serialize_all = "lowercase")]
 pub enum Commands {
     #[command(alias = "-a")]
+    #[strum(serialize = "add")]
     Add {
         keyword: String,
         target_path: Option<Utf8PathBuf>,
     },
     #[command(alias = "-d")]
+    #[strum(serialize = "delete")]
     Del {
         #[arg(value_name = "KEYWORD")]
         keyword: Option<String>,
     },
     #[command(alias = "-m")]
+    #[strum(serialize = "move")]
     Move {
         keyword: Option<String>,
         target_path: Option<Utf8PathBuf>,
@@ -31,9 +37,14 @@ pub enum Commands {
         source_path: Option<Utf8PathBuf>,
         target_path: Option<Utf8PathBuf>,
     },
+    #[command(alias = "-c")]
+    #[strum(serialize = "copy")]
     Copy {
-        source_path: Utf8PathBuf,
+        target_path: Option<Utf8PathBuf>,
+        alias: Option<String>,
     },
+    #[command(alias = "-l")]
+    #[strum(serialize = "list")]
     List,
 }
 
@@ -41,39 +52,57 @@ pub enum Commands {
 pub struct SubArgs<'a> {
     pub keyword: String,
     pub source_path: &'a Utf8PathBuf,
-    pub target_path: &'a Utf8PathBuf,
+    pub target_path: Utf8PathBuf,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SymlinkInfo {
-    pub original_path: String,
-    pub link_path: String,
+impl<'a> SubArgs<'a> {
+    pub fn new(keyword: String, source_path: &'a Utf8PathBuf, target_path: Utf8PathBuf) -> Self {
+        SubArgs {
+            keyword,
+            source_path,
+            target_path,
+        }
+    }
 }
 
-impl Config {
-    // pub fn get_arg(&self) -> Option<&dyn Args> {
-    //     match &self.command {
-    //         Commands::Add(subargs) => Some(subargs as &dyn Args),
-    //         Commands::Del(delargs) => Some(delargs as &dyn Args),
-    //         Commands::Keyword(keyword) => Some(keyword as &dyn Args),
-    //         Commands::Copy(copy_arg) => Some(copy_arg as &dyn Args),
-    //         _ => None,
-    //     }
-    // }
+impl Commands {
+    pub fn process(
+        &self,
+        data_manager: &mut DataManager,
+        default_path: &Utf8PathBuf,
+    ) -> Result<(), io::Error> {
+        let sub_args = match self {
+            Commands::Add {
+                keyword,
+                target_path,
+            } => SubArgs::new(
+                keyword.to_string(),
+                default_path,
+                target_path.clone().unwrap_or(Utf8PathBuf::default()),
+            ),
 
-    // pub fn get_keyword(&self) -> Option<&str> {
-    //     self.get_subarg().map(|subargs| subargs.keyword.as_str())
-    // }
+            Commands::Del { keyword } => SubArgs::new(
+                keyword.clone().unwrap_or_default(),
+                default_path,
+                default_path.clone(),
+            ),
 
-    // pub fn get_source_path(&self) -> Option<&Utf8PathBuf> {
-    //     self.get_subarg().map(|subargs| &subargs.source_path)
-    // }
-
-    // pub fn get_target_path(&self) -> Option<&Utf8PathBuf> {
-    //     self.get_subarg().map(|subargs| &subargs.target_path)
-    // }
-
-    // // pub fn get_action(&self) -> Option<&Actions> {
-    // //     self.get_subarg().map(|subargs| &subargs.action)
-    // // }
+            Commands::Move {
+                keyword,
+                target_path,
+            } => SubArgs::new(
+                keyword.clone().unwrap_or_default(),
+                default_path,
+                target_path.clone().unwrap_or(Utf8PathBuf::default()),
+            ),
+            Commands::Copy { target_path, alias } => SubArgs::new(
+                alias.clone().unwrap_or_default(),
+                default_path,
+                target_path.clone().unwrap_or(Utf8PathBuf::default()),
+            ),
+            _ => SubArgs::new("".to_string(), default_path, default_path.clone()),
+        };
+        data_manager.match_action(DataAction::from(self), &sub_args);
+        Ok(())
+    }
 }

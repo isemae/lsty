@@ -20,11 +20,10 @@ pub fn navigate_menu(action: MenuAction) {
 
     let mut stage_num = 0;
     let data_manager = data_manager::DataManager::new();
-    let mut data = data_manager.parse_json_data();
+    let data = data_manager.parse_json_data();
     let index = "";
     // if let Some(items) = data.get_mut(index).and_then(|p| p.as_array_mut()) {}
     // println!("{:?}", menu);
-    let submenu: &[&str];
 
     let default_submenu = &["[s] SCAN", "[l] LINK", "[u] UNSET"];
     // let pair_submenu = &menu
@@ -34,21 +33,17 @@ pub fn navigate_menu(action: MenuAction) {
     //     .collect::<Vec<&str>>();
 
     enable_raw_mode().expect("Failed to enable raw mode");
-    match action {
-        MenuAction::Default => {
-            submenu = default_submenu;
-        }
+    let submenu: &[&str] = match action {
+        MenuAction::Default => default_submenu,
         // MenuAction::Pair => submenu = pair_submenu,
         // MenuAction::Delete => data = data.pairs,
-        _ => {
-            submenu = &[""];
-        }
-    }
+        _ => &[""],
+    };
 
     loop {
         execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
         print_stage(
-            &data.as_ref().unwrap(),
+            data.as_ref().unwrap(),
             stage_num,
             cursor_y,
             cursor_x,

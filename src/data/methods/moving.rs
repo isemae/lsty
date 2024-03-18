@@ -32,7 +32,7 @@ impl DataManager {
         keyword: &str,
     ) -> Result<HashMap<String, Vec<String>>, io::Error> {
         let current_dir = current_dir()?;
-        let entries = fs::read_dir(&current_dir)?;
+        let entries = fs::read_dir(current_dir)?;
         let mut entry_map: HashMap<String, Vec<String>> = HashMap::new();
         let mut patterns = HashMap::new();
 
@@ -49,7 +49,7 @@ impl DataManager {
             for kw in &keywords {
                 let pattern = patterns
                     .entry(kw.clone())
-                    .or_insert_with(|| Regex::new(&kw).unwrap());
+                    .or_insert_with(|| Regex::new(kw).unwrap());
                 if let Some(target) = target_map.get(kw) {
                     if pattern.is_match(&entry_name) {
                         entry_map
@@ -83,14 +83,14 @@ impl DataManager {
                     match Path::new(&new_entry).exists() {
                         true => {
                             println!(
-                                "  \x1b[0;33m[{}]\x1b[0m {} {} already exists in the target directory.",
-                                "!", entry_symbol, entry
+                                "  \x1b[0;33m[!]\x1b[0m {} {} already exists in the target directory.",
+                                entry_symbol, entry
                             );
                             continue;
                         }
                         false => {
                             self.scan_and_validate_path(target_map).unwrap();
-                            println!("  \x1b[0;32m{}\x1b[0m {} {}", "[✓]", entry_symbol, entry,);
+                            println!("  \x1b[0;32m[✓]\x1b[0m {} {}", entry_symbol, entry,);
                             self.move_entry(entry, new_entry);
                             moved_count += 1;
                         }
@@ -100,7 +100,7 @@ impl DataManager {
             println!("");
         }
         if moved_count == 0 {
-            println!("{} No items to move in the source path.", "[✓]");
+            println!("[✓] No items to move in the source path.",);
         }
         Ok(())
     }

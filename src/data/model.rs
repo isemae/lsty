@@ -9,6 +9,7 @@ pub struct DataModel {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct DataObject {
+    pub alias: String,
     pub sources: Vec<String>,
     pub targets: HashMap<String, String>,
 }

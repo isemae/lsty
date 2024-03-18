@@ -3,19 +3,21 @@ use crate::{
     data::{data_manager::DataManager, model::DataModel},
 };
 use camino::{Utf8Path, Utf8PathBuf};
-use std::{collections::HashMap, io};
+use std::{collections::HashMap, env::current_dir, io};
 
 impl DataManager {
     pub fn add_rule_to_json(
-        &self,
+        &mut self,
         mut data: DataModel,
-        source_path: String,
+        // source_path: String,
         mut target_path: String,
         keyword: String,
     ) -> io::Result<()> {
-        if !target_path.is_empty() {
-            target_path = target_path
-        } else {
+        let source_path = current_dir()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        if target_path.is_empty() {
             target_path = format!("./{}", &keyword);
         }
 
