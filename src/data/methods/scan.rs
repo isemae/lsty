@@ -14,12 +14,12 @@ impl DataManager {
         let mut valid_pair = HashMap::new();
 
         for map in pair.iter() {
-            if !PathBuf::from(&map.1).exists() {
+            if !PathBuf::from(map.1).exists() {
                 eprintln!(
                             " \x1b[0;33m[!] target path '{}' doesn't exist. Creating the directory...\x1b[0m",
                             map.1
                         );
-                fs::create_dir_all(&map.1)
+                fs::create_dir_all(map.1)
                     .expect("Error: failed to create target directory on disk.");
                 valid_pair.insert(map.0.clone(), map.1.clone());
             } else {

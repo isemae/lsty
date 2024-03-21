@@ -29,7 +29,8 @@ pub enum DataAction {
     Add,
     Delete,
     Move,
-    Copy,
+    Import,
+    Alias,
     Scan,
     Default,
 }
@@ -39,7 +40,9 @@ impl From<&Commands> for DataAction {
         match c {
             Commands::Add { .. } => DataAction::Add,
             Commands::Del { .. } => DataAction::Delete,
-            Commands::Copy { .. } => DataAction::Copy,
+            Commands::Move { .. } => DataAction::Move,
+            Commands::Alias { .. } => DataAction::Alias,
+            Commands::Import { .. } => DataAction::Import,
             _ => DataAction::Default,
         }
     }
@@ -57,18 +60,20 @@ impl DataManager {
 
         match action {
             DataAction::Add => {
-                match self.print_rule_info(args) {
+                match self.print_rule_info(&args) {
                     Ok(()) => {}
                     Err(e) => {
                         eprintln!("Error: {}", e)
                     }
                 }
                 match self.add_rule_to_json(
-                    data,
-                    args.target_path.to_string(),
+                    data.clone(),
+                    args.secondary_path.to_string(),
                     args.keyword.clone(),
                 ) {
-                    Ok(()) => {}
+                    Ok(()) => {
+                        println!("Data added.")
+                    }
                     Err(e) => {
                         eprintln!("Error: {}", e);
                         process::exit(1);
@@ -79,11 +84,11 @@ impl DataManager {
                 if args.keyword.is_empty() {
                     println!("delmenu")
                 } else {
-                    println!("{}", args.source_path.as_str());
+                    println!("{}", args.primary_path.as_str());
 
                     match self.remove_rule_from_json(
                         data.clone(),
-                        args.source_path.as_str(),
+                        args.primary_path.as_str(),
                         args.keyword.as_str(),
                     ) {
                         Ok(()) => println!("rule deleted successfully"),
@@ -94,13 +99,9 @@ impl DataManager {
                                 if let Some(obj) = data
                                     .data
                                     .iter()
-                                    .find(|o| o.sources.contains(&args.source_path.to_string()))
+                                    .find(|o| o.source.contains(&args.primary_path.to_string()))
                                 {
-                                    obj.targets
-                                        .keys()
-                                        .map(|k| k.clone())
-                                        .collect::<Vec<_>>()
-                                        .join("', '")
+                                    obj.targets.keys().cloned().collect::<Vec<_>>().join("', '")
                                 } else {
                                     "".to_string()
                                 }
@@ -115,14 +116,32 @@ impl DataManager {
             }
             DataAction::Move => {
                 if let Some(target_map) = data.data.iter_mut().find(|obj| {
-                    obj.sources
+                    obj.source
                         .contains(&current_dir.to_string_lossy().to_string())
                 }) {
                     self.move_dirs(&target_map.targets, args.keyword.as_str())?;
                 }
             }
-            DataAction::Copy => {
-                self.copy_rule(data, args.target_path.to_string());
+            DataAction::Import => {
+                println!("{:?}", args);
+                match self.import_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
+                {
+                    Ok(()) => {
+                        println!("rules imported.")
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {}", e)
+                    }
+                }
+            }
+            DataAction::Alias => {
+                if let Some(target_map) = data.data.iter_mut().find(|obj| {
+                    obj.source
+                        .contains(&current_dir.to_string_lossy().to_string())
+                }) {
+                    self.set_alias(target_map, args.keyword.clone());
+                    self.save_json_data(&data)?
+                }
             }
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
         }
@@ -139,7 +158,7 @@ impl DataManager {
                     Ok(..) => {}
                     Err(e) => eprintln!("Error: {}", e),
                 }
-                serde_json::from_str(&data)
+                serde_json::from_str(data.as_str())
             }
             Err(e) => Err(serde_json::Error::custom(format!(
                 "failed to load data file: {}",
@@ -153,7 +172,7 @@ impl DataManager {
         let exe_dir = exe_path.parent().unwrap();
 
         let mut file = File::create(exe_dir.join("lsty.json"))?;
-        serde_json::to_writer_pretty(&mut file, &data)?;
+        serde_json::to_writer_pretty(&mut file, data)?;
         Ok(())
     }
 
@@ -161,15 +180,14 @@ impl DataManager {
         let mut source_path = Utf8PathBuf::new();
         let mut target_path = Utf8PathBuf::new();
 
-        source_path.push(args.source_path);
-        target_path.push(args.target_path.clone());
+        source_path.push(args.primary_path.clone());
+        target_path.push(args.secondary_path.clone());
 
         let keyword = &args.keyword;
 
         println!(" KEYWORD: {}", keyword);
         println!(" SOURCE : \x1b[4m{}\x1b[0m", source_path);
-        println!(" TARGET : └─> \x1b[4m{}\x1b[0m", target_path);
-        println!("");
+        println!(" TARGET : └─> \x1b[4m{}\x1b[0m \n", target_path);
         Ok(())
     }
 }

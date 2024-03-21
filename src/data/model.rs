@@ -2,15 +2,15 @@ use super::data_manager::{self, DataManager};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct DataModel {
     pub data: Vec<DataObject>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct DataObject {
     pub alias: String,
-    pub sources: Vec<String>,
+    pub source: String,
     pub targets: HashMap<String, String>,
 }
 

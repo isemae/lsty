@@ -18,7 +18,7 @@ impl DataManager {
         if let Some(obj) = data
             .data
             .iter_mut()
-            .find(|obj| obj.sources.contains(&source_path.to_string()))
+            .find(|obj| obj.source.contains(&source_path.to_string()))
         {
             if obj.targets.contains_key(keyword) {
                 obj.targets.remove(keyword);

@@ -10,6 +10,8 @@ fn main() {
 
     match command_manager::process_command(&args) {
         Ok(()) => {}
-        Err(e) => {}
+        Err(e) => {
+            eprintln!("{}", e)
+        }
     }
 }

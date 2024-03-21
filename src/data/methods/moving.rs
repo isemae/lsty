@@ -28,11 +28,11 @@ impl DataManager {
 
     fn generate_new_entries(
         &self,
+        source: &str,
         target_map: &HashMap<String, String>,
         keyword: &str,
     ) -> Result<HashMap<String, Vec<String>>, io::Error> {
-        let current_dir = current_dir()?;
-        let entries = fs::read_dir(current_dir)?;
+        let entries = fs::read_dir(source)?;
         let mut entry_map: HashMap<String, Vec<String>> = HashMap::new();
         let mut patterns = HashMap::new();
 
@@ -70,11 +70,12 @@ impl DataManager {
     ) -> Result<(), io::Error> {
         let mut moved_count = 0;
         let current_dir = current_dir()?;
-        let entries_map = self.generate_new_entries(target_map, keyword)?;
-        println!("");
-        println!("SOURCE: {}", current_dir.display());
+        let current_dir_str = current_dir.to_str().expect("");
+
+        let entries_map = self.generate_new_entries(current_dir_str, target_map, keyword)?;
+        println!("\n SOURCE: {}", current_dir_str);
         for (target, vec) in entries_map {
-            println!("\r└→ \x1b[4m{}\x1b[0m\x1b[0m", target);
+            println!("\r└→ \x1b[4m{}\x1b[0m\x1b[0m \n", target);
             for entry in vec.clone() {
                 let new_entry = format!("{}/{}", target, entry);
                 let entry_symbol = menu::entry_symbol(&entry);
@@ -97,7 +98,6 @@ impl DataManager {
                     }
                 }
             }
-            println!("");
         }
         if moved_count == 0 {
             println!("[✓] No items to move in the source path.",);
