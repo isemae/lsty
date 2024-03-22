@@ -1,19 +1,13 @@
-use crate::{
-    cli::menu,
-    data::{
-        data_manager::DataManager,
-        model::{DataModel, DataObject},
-    },
-};
+use crate::{cli::menu, data::data_manager::DataManager};
 use regex::Regex;
-
-use std::fs::DirEntry;
-use std::{collections::HashMap, io};
 use std::{
+    collections::{self, hash_map::Entry, HashMap},
     env::current_dir,
-    fs,
+    fs::{self, DirEntry},
+    io,
     path::{Path, PathBuf},
 };
+
 use unicode_normalization::UnicodeNormalization;
 
 impl DataManager {
@@ -47,11 +41,15 @@ impl DataManager {
             };
 
             for kw in &keywords {
-                let pattern = patterns
-                    .entry(kw.clone())
-                    .or_insert_with(|| Regex::new(kw).unwrap());
-                if let Some(target) = target_map.get(kw) {
-                    if pattern.is_match(&entry_name) {
+                let lowercase_kw = kw.to_lowercase();
+                let pattern = match patterns.entry(kw.to_lowercase()) {
+                    Entry::Occupied(entry) => entry.into_mut(),
+                    Entry::Vacant(entry) => entry.insert(Regex::new(&lowercase_kw).unwrap()),
+                };
+                // .or_insert_with(|| Regex::new(&lowercase_kw).unwrap());
+                if let Some(target) = target_map.get(&lowercase_kw) {
+                    let lowercase_entry_name = entry_name.to_lowercase();
+                    if pattern.is_match(&lowercase_entry_name) {
                         entry_map
                             .entry(target.to_string())
                             .or_default()
@@ -75,7 +73,7 @@ impl DataManager {
         let entries_map = self.generate_new_entries(current_dir_str, target_map, keyword)?;
         println!("\n SOURCE: {}", current_dir_str);
         for (target, vec) in entries_map {
-            println!("\r└→ \x1b[4m{}\x1b[0m\x1b[0m \n", target);
+            println!("\r└→ \x1b[4m{}\x1b[0m\x1b[0m ", target);
             for entry in vec.clone() {
                 let new_entry = format!("{}/{}", target, entry);
                 let entry_symbol = menu::entry_symbol(&entry);
@@ -92,7 +90,7 @@ impl DataManager {
                         false => {
                             self.scan_and_validate_path(target_map).unwrap();
                             println!("  \x1b[0;32m[✓]\x1b[0m {} {}", entry_symbol, entry,);
-                            self.move_entry(entry, new_entry);
+                            // self.move_entry(entry, new_entry);
                             moved_count += 1;
                         }
                     }
