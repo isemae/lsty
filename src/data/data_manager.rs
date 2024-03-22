@@ -71,9 +71,7 @@ impl DataManager {
                     args.secondary_path.to_string(),
                     args.keyword.clone(),
                 ) {
-                    Ok(()) => {
-                        println!("Data added.")
-                    }
+                    Ok(()) => {}
                     Err(e) => {
                         eprintln!("Error: {}", e);
                         process::exit(1);
@@ -140,7 +138,10 @@ impl DataManager {
                         .contains(&current_dir.to_string_lossy().to_string())
                 }) {
                     self.set_alias(target_map, args.keyword.clone());
-                    self.save_json_data(&data)?
+                    match self.save_json_data(&data) {
+                        Ok(()) => println!("set new alias {}", args.keyword),
+                        Err(e) => eprintln!("{}", e),
+                    };
                 }
             }
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
