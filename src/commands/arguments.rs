@@ -86,7 +86,7 @@ impl Commands {
                 keyword,
                 target_path,
             } => SubArgs::new(
-                keyword.to_string(),
+                keyword.to_lowercase(),
                 default_path,
                 if target_path.is_some() {
                     target_path.clone().unwrap()

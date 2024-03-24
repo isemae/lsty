@@ -12,14 +12,11 @@ impl DataManager {
         target_path: String,
         keyword: String,
     ) -> io::Result<()> {
-        let lowercase_keyword = keyword.to_lowercase();
         let source_path = Utf8PathBuf::from_path_buf(current_dir().unwrap_or_default())
             .expect("valid Unicode path succeeded");
 
-        // case rule for the source exists
         if let Some(obj) = data.data.iter_mut().find(|o| o.source == source_path) {
-            // key exists in the targets map
-            if let Some(existing_target) = obj.targets.get(&lowercase_keyword) {
+            if let Some(existing_target) = obj.targets.get(&keyword) {
                 if existing_target == &target_path {
                     println!("rule already exists.");
                     println!(
@@ -29,18 +26,12 @@ impl DataManager {
                     process::exit(1)
                 }
             } else {
-                obj.targets.insert(lowercase_keyword, target_path.clone());
+                obj.targets.insert(keyword, target_path.clone());
                 println!("rule added.");
             }
-
         // case rule for the source doesn't exist
         } else {
-            self.set_new_rules(
-                &mut data,
-                lowercase_keyword,
-                source_path.to_string(),
-                target_path,
-            );
+            self.set_new_rules(&mut data, keyword, source_path.to_string(), target_path);
         }
         self.save_json_data(&data)?;
 
