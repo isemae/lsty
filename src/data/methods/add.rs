@@ -1,64 +1,49 @@
-use crate::{
-    cli::menu,
-    data::{
-        data_manager::DataManager,
-        model::{DataModel, DataObject},
-    },
+use crate::data::{
+    data_manager::DataManager,
+    model::{DataModel, DataObject},
 };
-use camino::{Utf8Path, Utf8PathBuf};
-use std::{collections::HashMap, env::current_dir, io};
+use camino::Utf8PathBuf;
+use std::{env::current_dir, io, process};
 
 impl DataManager {
     pub fn add_rule_to_json(
         &self,
         mut data: DataModel,
-        mut target_path: String,
+        target_path: String,
         keyword: String,
     ) -> io::Result<()> {
+        let lowercase_keyword = keyword.to_lowercase();
         let source_path = Utf8PathBuf::from_path_buf(current_dir().unwrap_or_default())
             .expect("valid Unicode path succeeded");
 
-        if target_path.is_empty() {
-            target_path = format!("./{}", &keyword);
-        }
-
-        let target_path_on_volume = Utf8Path::new(target_path.as_str());
-        if !target_path_on_volume.exists() || !target_path_on_volume.is_dir() {
-            return Err(io::Error::new(
-                io::ErrorKind::NotFound,
-                "no such directory exists.",
-            ));
-        }
-
-        if let Some(obj) = data
-            .data
-            .iter_mut()
-            .find(|o| o.source.contains(&source_path.to_string()))
-        {
-            if let Some(existing_target) = obj.targets.get(&keyword) {
+        // case rule for the source exists
+        if let Some(obj) = data.data.iter_mut().find(|o| o.source == source_path) {
+            // key exists in the targets map
+            if let Some(existing_target) = obj.targets.get(&lowercase_keyword) {
                 if existing_target == &target_path {
-                    eprintln!(
-                      "rule for the target '{}' already exists. do you want to change the keyword? (y/N):",
-                      target_path
-                  );
-                } else {
-                    eprintln!(
-                        "Rule for the keyword '{}' already exists with a different target: '{}'. do you want to change the target path?",
-                        keyword, existing_target
+                    println!("rule already exists.");
+                    println!(
+                        "Note: try \"lsty edit {}\" or \"lsty edit {}\" to edit the keyword or path.",
+                        keyword, target_path
                     );
-                }
-                if menu::get_yn_input() {
-                    obj.targets.insert(keyword.clone(), target_path);
-                    println!("rule updated.");
+                    process::exit(1)
                 }
             } else {
-                obj.targets.insert(keyword, target_path);
+                obj.targets.insert(lowercase_keyword, target_path.clone());
                 println!("rule added.");
             }
+
+        // case rule for the source doesn't exist
         } else {
-            self.set_new_rules(&mut data, keyword, source_path.to_string(), target_path);
+            self.set_new_rules(
+                &mut data,
+                lowercase_keyword,
+                source_path.to_string(),
+                target_path,
+            );
         }
         self.save_json_data(&data)?;
+
         Ok(())
     }
 

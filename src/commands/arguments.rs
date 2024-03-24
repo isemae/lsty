@@ -1,8 +1,11 @@
-use crate::data::data_manager::{DataAction, DataManager};
+use crate::{
+    cli::menu,
+    data::data_manager::{DataAction, DataManager},
+};
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
-use std::io;
+use std::{io, process};
 use strum_macros::{EnumString, VariantNames};
 
 #[derive(Parser, Debug)]
@@ -85,7 +88,25 @@ impl Commands {
             } => SubArgs::new(
                 keyword.to_string(),
                 default_path,
-                target_path.clone().unwrap_or(Utf8PathBuf::default()),
+                if target_path.is_some() {
+                    target_path.clone().unwrap()
+                } else {
+                    println!("target path is not provided. set the target path to the keyword in the current directory? (y/N):");
+                    match menu::get_yn_input() {
+                        true => {
+                            println!(
+                                "Note: the actual directory doesn't exist yet. it will be created later when the files are being moved."
+                            );
+                            target_path
+                                .clone()
+                                .unwrap_or(Utf8PathBuf::from(format!("./{}", &keyword)))
+                        }
+                        false => {
+                            eprintln!("target path input should be given.");
+                            process::exit(1)
+                        }
+                    }
+                },
             ),
 
             Commands::Del { keyword } => SubArgs::new(
