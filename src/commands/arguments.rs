@@ -4,7 +4,6 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
-use serde::{Deserialize, Serialize};
 use std::{io, process};
 use strum_macros::{EnumString, VariantNames};
 
@@ -21,7 +20,7 @@ pub enum Commands {
     #[strum(serialize = "add")]
     Add {
         keyword: String,
-        target_path: Option<Utf8PathBuf>,
+        target_path: Option<String>,
     },
     #[command(alias = "-d")]
     #[strum(serialize = "delete")]
@@ -34,20 +33,27 @@ pub enum Commands {
     #[strum(serialize = "move")]
     Move {
         keyword: Option<String>,
-        target_path: Option<Utf8PathBuf>,
+        target_path: Option<String>,
     },
 
     #[command(alias = "-s")]
     #[strum(serialize = "scan")]
     Scan {
         keyword: Option<String>,
-        source_path: Option<Utf8PathBuf>,
-        target_path: Option<Utf8PathBuf>,
+        source_path: Option<String>,
+        target_path: Option<String>,
     },
 
     #[command(alias = "-i")]
     #[strum(serialize = "import")]
     Import { alias_or_source: String },
+
+    #[command(alias = "-e")]
+    #[strum(serialize = "edit")]
+    Edit {
+        keyword: String,
+        replace: Option<String>,
+    },
 
     #[command(alias = "-al")]
     #[strum(serialize = "alias")]
@@ -61,12 +67,12 @@ pub enum Commands {
 #[derive(Debug)]
 pub struct SubArgs {
     pub keyword: String,
-    pub primary_path: Utf8PathBuf,
-    pub secondary_path: Utf8PathBuf,
+    pub primary_path: String,
+    pub secondary_path: String,
 }
 
 impl SubArgs {
-    pub fn new(keyword: String, primary_path: Utf8PathBuf, secondary_path: Utf8PathBuf) -> Self {
+    pub fn new(keyword: String, primary_path: String, secondary_path: String) -> Self {
         SubArgs {
             keyword,
             primary_path,
@@ -79,7 +85,7 @@ impl Commands {
     pub fn process(
         &self,
         data_manager: &mut DataManager,
-        default_path: Utf8PathBuf,
+        default_path: String,
     ) -> Result<(), io::Error> {
         let sub_args = &match self {
             Commands::Add {
@@ -97,9 +103,7 @@ impl Commands {
                             println!(
                                 "Note: the actual directory doesn't exist yet. it will be created later when the files are being moved."
                             );
-                            target_path
-                                .clone()
-                                .unwrap_or(Utf8PathBuf::from(format!("./{}", &keyword)))
+                            target_path.clone().unwrap_or(format!("./{}", &keyword))
                         }
                         false => {
                             eprintln!("target path input should be given.");
@@ -120,20 +124,22 @@ impl Commands {
             } => SubArgs::new(
                 keyword.clone().unwrap_or_default(),
                 default_path,
-                target_path.clone().unwrap_or(Utf8PathBuf::default()),
+                target_path.clone().unwrap_or("".to_string()),
             ),
 
             Commands::Import { alias_or_source } => {
                 if Utf8PathBuf::from(alias_or_source).is_dir() {
-                    SubArgs::new(
-                        String::from(""),
-                        default_path,
-                        Utf8PathBuf::from(alias_or_source.clone()),
-                    )
+                    SubArgs::new(String::from(""), default_path, alias_or_source.clone())
                 } else {
-                    SubArgs::new(alias_or_source.clone(), default_path, Utf8PathBuf::new())
+                    SubArgs::new(alias_or_source.clone(), default_path, "".to_string())
                 }
             }
+
+            Commands::Edit { keyword, replace } => SubArgs::new(
+                keyword.clone(),
+                default_path,
+                replace.clone().unwrap_or("".to_string()),
+            ),
 
             Commands::Alias { alias } => SubArgs::new(
                 alias.clone().unwrap_or_default(),
