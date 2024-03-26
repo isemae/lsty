@@ -8,14 +8,11 @@ use colored::*;
 
 use serde::ser::Error;
 use std::{
-    collections::HashMap,
     env,
     fs::File,
     io::{self, prelude::*},
-    ops::Deref,
     path::{Path, PathBuf},
     process,
-    str::FromStr,
 };
 
 pub struct DataManager;
@@ -32,6 +29,7 @@ pub enum DataAction {
     Import,
     Alias,
     Scan,
+    Edit,
     Default,
 }
 
@@ -43,6 +41,7 @@ impl From<&Commands> for DataAction {
             Commands::Move { .. } => DataAction::Move,
             Commands::Alias { .. } => DataAction::Alias,
             Commands::Import { .. } => DataAction::Import,
+            Commands::Edit { .. } => DataAction::Edit,
             _ => DataAction::Default,
         }
     }
@@ -79,33 +78,16 @@ impl DataManager {
                 };
             }
             DataAction::Delete => {
-                if args.keyword.is_empty() {
-                    println!("delmenu")
-                } else {
-                    println!("{}", args.primary_path.as_str());
+                match self.remove_rule_from_json(
+                    data.clone(),
+                    args.primary_path.as_str(),
+                    args.keyword.as_str(),
+                ) {
+                    Ok(()) => println!("deleted rule successfully."),
+                    Err(e) => {
+                        eprintln!("{}", e);
 
-                    match self.remove_rule_from_json(
-                        data.clone(),
-                        args.primary_path.as_str(),
-                        args.keyword.as_str(),
-                    ) {
-                        Ok(()) => println!("rule deleted successfully"),
-                        Err(e) => {
-                            eprintln!("Error: {}", e);
-                            println!(
-                                "keywords available for current path: \n '{}'",
-                                if let Some(obj) = data
-                                    .data
-                                    .iter()
-                                    .find(|o| o.source.contains(&args.primary_path.to_string()))
-                                {
-                                    obj.targets.keys().cloned().collect::<Vec<_>>().join("', '")
-                                } else {
-                                    "".to_string()
-                                }
-                            );
-                            process::exit(1);
-                        }
+                        process::exit(1);
                     }
                 }
             }
@@ -113,10 +95,11 @@ impl DataManager {
                 // self.scan_and_validate_path(data.data);
             }
             DataAction::Move => {
-                if let Some(target_map) = data.data.iter_mut().find(|obj| {
-                    obj.source
-                        .contains(&current_dir.to_string_lossy().to_string())
-                }) {
+                if let Some(target_map) = data
+                    .data
+                    .iter_mut()
+                    .find(|obj| obj.source == current_dir.to_string_lossy().to_string())
+                {
                     self.move_dirs(&target_map.targets, args.keyword.as_str())?;
                 }
             }
@@ -131,6 +114,9 @@ impl DataManager {
                         eprintln!("Error: {}", e)
                     }
                 }
+            }
+            DataAction::Edit => {
+                self.edit_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
             }
             DataAction::Alias => {
                 if let Some(target_map) = data.data.iter_mut().find(|obj| {
