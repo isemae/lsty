@@ -125,7 +125,7 @@ impl DataManager {
                 }) {
                     self.set_alias(target_map, args.keyword.clone());
                     match self.save_json_data(&data) {
-                        Ok(()) => println!("set new alias {}", args.keyword),
+                        Ok(()) => {}
                         Err(e) => eprintln!("{}", e),
                     };
                 }
