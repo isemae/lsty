@@ -3,15 +3,14 @@ use crate::{
     data::model::DataModel,
 };
 
-use camino::{Utf8Path, Utf8PathBuf};
-use colored::*;
+use camino::Utf8PathBuf;
 
 use serde::ser::Error;
 use std::{
     env,
     fs::File,
     io::{self, prelude::*},
-    path::{Path, PathBuf},
+    path::PathBuf,
     process,
 };
 
@@ -62,7 +61,7 @@ impl DataManager {
                 match self.print_rule_info(&args) {
                     Ok(()) => {}
                     Err(e) => {
-                        eprintln!("Error: {}", e)
+                        eprintln!("{}", e)
                     }
                 }
                 match self.add_rule_to_json(
@@ -72,7 +71,7 @@ impl DataManager {
                 ) {
                     Ok(()) => {}
                     Err(e) => {
-                        eprintln!("Error: {}", e);
+                        eprintln!("{}", e);
                         process::exit(1);
                     }
                 };
@@ -98,7 +97,7 @@ impl DataManager {
                 if let Some(target_map) = data
                     .data
                     .iter_mut()
-                    .find(|obj| obj.source == current_dir.to_string_lossy().to_string())
+                    .find(|obj| obj.source == current_dir.to_string_lossy())
                 {
                     self.move_dirs(&target_map.targets, args.keyword.as_str())?;
                 }
@@ -107,11 +106,9 @@ impl DataManager {
                 println!("{:?}", args);
                 match self.import_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
                 {
-                    Ok(()) => {
-                        println!("rules imported.")
-                    }
+                    Ok(()) => {}
                     Err(e) => {
-                        eprintln!("Error: {}", e)
+                        eprintln!("{}", e)
                     }
                 }
             }
@@ -143,7 +140,7 @@ impl DataManager {
                 let mut data = String::new();
                 match file.read_to_string(&mut data) {
                     Ok(..) => {}
-                    Err(e) => eprintln!("Error: {}", e),
+                    Err(e) => eprintln!("{}", e),
                 }
                 serde_json::from_str(data.as_str())
             }
