@@ -40,7 +40,6 @@ pub enum Commands {
     #[strum(serialize = "scan")]
     Scan {
         keyword: Option<String>,
-        source_path: Option<String>,
         target_path: Option<String>,
     },
 
@@ -134,6 +133,15 @@ impl Commands {
                     SubArgs::new(alias_or_source.clone(), default_path, "".to_string())
                 }
             }
+
+            Commands::Scan {
+                keyword,
+                target_path,
+            } => SubArgs::new(
+                keyword.clone().unwrap_or(String::from("")),
+                default_path,
+                target_path.clone().unwrap_or("".to_string()),
+            ),
 
             Commands::Edit { keyword, replace } => SubArgs::new(
                 keyword.clone(),

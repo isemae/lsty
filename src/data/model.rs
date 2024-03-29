@@ -1,6 +1,7 @@
 use super::data_manager::{self, DataManager};
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, io};
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct DataModel {
@@ -15,25 +16,25 @@ pub struct DataObject {
 }
 
 impl DataModel {
-    fn new() -> Self {
+    pub fn new() -> Self {
         DataModel { data: Vec::new() }
     }
+
+    pub fn object_by_source(
+        &mut self,
+        source_path: Utf8PathBuf,
+    ) -> Result<&mut DataObject, io::Error> {
+        if let Some(obj) = self
+            .data
+            .iter_mut()
+            .find(|o| o.source == source_path.as_str())
+        {
+            Ok(obj)
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "no rules found for the current directory.",
+            ));
+        }
+    }
 }
-
-// impl Target {
-//     pub fn new() -> Self {
-//         Target {
-//             targets: HashMap::new(),
-//         }
-//     }
-//     pub fn iter(&self) -> impl Iterator<Item = (&String, &String)> {
-//         self.targets.iter()
-//     }
-// }
-
-// impl std::ops::Deref for Target {
-//     type Target = HashMap<String, String>;
-//     fn deref(&self) -> &Self::Target {
-//         &self.targets
-//     }
-// }

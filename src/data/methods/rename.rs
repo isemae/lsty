@@ -1,13 +1,12 @@
 use crate::{cli::menu, data::data_manager::DataManager};
 use regex::Regex;
 use std::{
-    collections::{self, hash_map::Entry, HashMap},
+    collections::{hash_map::Entry, HashMap},
     env::current_dir,
     fs::{self, DirEntry},
     io,
     path::{Path, PathBuf},
 };
-
 use unicode_normalization::UnicodeNormalization;
 
 impl DataManager {
@@ -70,7 +69,7 @@ impl DataManager {
         let current_dir_str = current_dir.to_str().expect("");
 
         let entries_map = self.generate_new_entries(current_dir_str, target_map, keyword)?;
-        println!("\n SOURCE: {}", current_dir_str);
+        println!("\nSOURCE: {}", current_dir_str);
         for (target, vec) in entries_map {
             println!("\r└→ \x1b[4m{}\x1b[0m\x1b[0m ", target);
             for entry in vec.clone() {
@@ -88,8 +87,8 @@ impl DataManager {
                         }
                         false => {
                             self.scan_and_validate_path(target_map).unwrap();
-                            println!("  \x1b[0;32m[✓]\x1b[0m {} {}", entry_symbol, entry,);
-                            self.move_entry(entry, new_entry);
+                            self.move_entry(entry.clone(), new_entry);
+                            println!("  \x1b[0;32m[✓]\x1b[0m {} {}", entry_symbol, entry);
                             moved_count += 1;
                         }
                     }
@@ -97,8 +96,11 @@ impl DataManager {
             }
         }
         if moved_count == 0 {
-            println!("[✓] No items to move in the source path.",);
+            println!("[✓] No items to move in the source path.");
+        } else {
+            println!("\nDone.")
         }
+
         Ok(())
     }
 
@@ -136,22 +138,3 @@ impl DataManager {
         Ok(())
     }
 }
-
-// fn validates_pair(source_path: &str, target_path: &str) -> Option<Result<(), io::Error>> {
-//
-// }
-
-// fn validates_path(path: &str) -> Result<(), io::Error> {
-//     if !Path::new(path).exists() {
-//         eprintln!(
-//             "\x1b[0;31m ✘ path {} is not a valid path.\x1b[0m",
-//             path.yellow()
-//         );
-//         return Err(io::Error::new(
-//             io::ErrorKind::NotFound,
-//             "no such directory exists.",
-//         ));
-//     }
-//     Ok(())
-// }
-// 데이터모델에 등록된 경로 유효성 확인

@@ -2,18 +2,16 @@ use crate::data::{
     data_manager::DataManager,
     model::{DataModel, DataObject},
 };
-use std::{collections::HashMap, env::current_dir, fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 impl DataManager {
     pub fn scan_and_validate_path(
         &self,
-        pair: &HashMap<String, String>,
+        targets: &HashMap<String, String>,
     ) -> Option<HashMap<String, String>> {
-        let current_dir = current_dir().unwrap_or_else(|_| PathBuf::from(""));
-
         let mut valid_pair = HashMap::new();
 
-        for map in pair.iter() {
+        for map in targets.iter() {
             if !PathBuf::from(map.1).exists() {
                 eprintln!(
                             " \x1b[0;33m[!] target path '{}' doesn't exist. Creating the directory...\x1b[0m",

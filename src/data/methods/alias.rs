@@ -2,7 +2,7 @@ use crate::{
     cli::menu,
     data::{data_manager::DataManager, model::DataObject},
 };
-use std::process;
+use std::{env, process};
 
 impl DataManager {
     pub fn set_alias(&self, data: &mut DataObject, alias: String) {

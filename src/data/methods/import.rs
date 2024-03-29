@@ -1,9 +1,12 @@
 use crate::{
     cli::menu,
-    data::{data_manager::DataManager, model::DataModel},
+    data::{
+        data_manager::DataManager,
+        model::{DataModel, DataObject},
+    },
 };
 use camino::Utf8PathBuf;
-use std::{env, io};
+use std::{collections::HashMap, env, io};
 
 impl DataManager {
     pub fn import_rule(
@@ -43,7 +46,14 @@ impl DataManager {
 
             match menu::get_yn_input() {
                 true => {
-                    current_obj.unwrap().targets.extend(targets);
+                    current_obj
+                        .unwrap_or(&mut DataObject {
+                            alias: "".to_string(),
+                            source: current_dir.to_string(),
+                            targets: HashMap::new(),
+                        })
+                        .targets
+                        .extend(targets);
                     self.save_json_data(data)?;
                     println!("rules imported.")
                 }

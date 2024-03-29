@@ -1,4 +1,5 @@
 use crate::{
+    cli::menu,
     commands::arguments::{Commands, SubArgs},
     data::model::DataModel,
 };
@@ -10,7 +11,6 @@ use std::{
     env,
     fs::File,
     io::{self, prelude::*},
-    path::PathBuf,
     process,
 };
 
@@ -40,6 +40,7 @@ impl From<&Commands> for DataAction {
             Commands::Move { .. } => DataAction::Move,
             Commands::Alias { .. } => DataAction::Alias,
             Commands::Import { .. } => DataAction::Import,
+            Commands::Scan { .. } => DataAction::Scan,
             Commands::Edit { .. } => DataAction::Edit,
             _ => DataAction::Default,
         }
@@ -51,82 +52,96 @@ impl DataManager {
         DataManager
     }
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> Result<(), io::Error> {
-        let mut data = self
-            .parse_json_data()
-            .unwrap_or_else(|_| DataModel { data: Vec::new() });
-        let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from(""));
-
+        let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel::new());
+        let current_dir = Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default())
+            .expect("valid Unicode path succeeded");
         match action {
-            DataAction::Add => {
-                match self.print_rule_info(&args) {
-                    Ok(()) => {}
+            DataAction::Add => match data.object_by_source(current_dir.clone()) {
+                Ok(obj) => {
+                    self.print_rule_info(&args);
+                    match self.add_rule_to_json(
+                        obj,
+                        args.secondary_path.to_string(),
+                        args.keyword.clone(),
+                    ) {
+                        Ok(()) => {}
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            process::exit(1);
+                        }
+                    };
+                    self.save_json_data(&data)?;
+                }
+                Err(_) => {
+                    self.set_new_rules(
+                        &mut data,
+                        args.keyword.clone(),
+                        current_dir,
+                        args.secondary_path.clone(),
+                    );
+                    self.save_json_data(&data)?;
+                }
+            },
+            DataAction::Delete => match data.object_by_source(current_dir) {
+                Ok(obj) => match self.remove_rule_from_json(obj, args.keyword.as_str()) {
+                    Ok(_) => {
+                        if menu::get_yn_input() {
+                            match self.save_json_data(&data) {
+                                Ok(()) => {
+                                    println!("deleted rule successfully.")
+                                }
+                                Err(e) => {
+                                    eprintln!("{}", e);
+                                }
+                            }
+                        }
+                    }
                     Err(e) => {
                         eprintln!("{}", e)
                     }
+                },
+                Err(_) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        "[!] no rule for the current path in the data",
+                    ));
                 }
-                match self.add_rule_to_json(
-                    data.clone(),
-                    args.secondary_path.to_string(),
-                    args.keyword.clone(),
-                ) {
-                    Ok(()) => {}
-                    Err(e) => {
-                        eprintln!("{}", e);
-                        process::exit(1);
-                    }
-                };
-            }
-            DataAction::Delete => {
-                match self.remove_rule_from_json(
-                    data.clone(),
-                    args.primary_path.as_str(),
-                    args.keyword.as_str(),
-                ) {
-                    Ok(()) => println!("deleted rule successfully."),
-                    Err(e) => {
-                        eprintln!("{}", e);
-
-                        process::exit(1);
-                    }
+            },
+            DataAction::Scan => match data.object_by_source(current_dir) {
+                Ok(obj) => {
+                    self.scan_and_validate_path(&obj.targets);
                 }
-            }
-            DataAction::Scan => {
-                // self.scan_and_validate_path(data.data);
-            }
-            DataAction::Move => {
-                if let Some(target_map) = data
-                    .data
-                    .iter_mut()
-                    .find(|obj| obj.source == current_dir.to_string_lossy())
-                {
-                    self.move_dirs(&target_map.targets, args.keyword.as_str())?;
+                Err(_) => {}
+            },
+            DataAction::Move => match data.object_by_source(current_dir) {
+                Ok(obj) => {
+                    self.move_dirs(&obj.targets, args.keyword.as_str())?;
                 }
-            }
+                Err(_) => {}
+            },
             DataAction::Import => {
                 println!("{:?}", args);
                 match self.import_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
                 {
                     Ok(()) => {}
                     Err(e) => {
-                        eprintln!("{}", e)
+                        eprintln!("Error: {}", e)
                     }
                 }
             }
             DataAction::Edit => {
                 self.edit_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
             }
-            DataAction::Alias => {
-                if let Some(target_map) = data.data.iter_mut().find(|obj| {
-                    obj.source
-                        .contains(&current_dir.to_string_lossy().to_string())
-                }) {
-                    self.set_alias(target_map, args.keyword.clone());
+            DataAction::Alias => match data.object_by_source(current_dir) {
+                Ok(obj) => {
+                    self.set_alias(obj, args.keyword.clone());
                     match self.save_json_data(&data) {
                         Ok(()) => {}
                         Err(e) => eprintln!("{}", e),
                     };
                 }
-            }
+                Err(_) => {}
+            },
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
         }
         Ok(())
@@ -140,7 +155,7 @@ impl DataManager {
                 let mut data = String::new();
                 match file.read_to_string(&mut data) {
                     Ok(..) => {}
-                    Err(e) => eprintln!("{}", e),
+                    Err(e) => eprintln!("Error: {}", e),
                 }
                 serde_json::from_str(data.as_str())
             }
@@ -160,7 +175,7 @@ impl DataManager {
         Ok(())
     }
 
-    fn print_rule_info(&self, args: &SubArgs) -> io::Result<()> {
+    fn print_rule_info(&self, args: &SubArgs) {
         let mut source_path = Utf8PathBuf::new();
         let mut target_path = Utf8PathBuf::new();
 
@@ -172,6 +187,5 @@ impl DataManager {
         println!(" KEYWORD: {}", keyword);
         println!(" SOURCE : \x1b[4m{}\x1b[0m", source_path);
         println!(" TARGET : └─> \x1b[4m{}\x1b[0m \n", target_path);
-        Ok(())
     }
 }

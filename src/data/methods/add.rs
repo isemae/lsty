@@ -1,39 +1,32 @@
+use camino::Utf8PathBuf;
+
 use crate::data::{
     data_manager::DataManager,
     model::{DataModel, DataObject},
 };
-use camino::Utf8PathBuf;
-use std::{env::current_dir, io, process};
+use std::{io, process};
 
 impl DataManager {
     pub fn add_rule_to_json(
         &self,
-        mut data: DataModel,
+        data: &mut DataObject,
         target_path: String,
         keyword: String,
     ) -> io::Result<()> {
-        let source_path = Utf8PathBuf::from_path_buf(current_dir().unwrap_or_default())
-            .expect("valid Unicode path succeeded");
-
-        if let Some(obj) = data.data.iter_mut().find(|o| o.source == source_path) {
-            if let Some(existing_target) = obj.targets.get(&keyword) {
-                if existing_target == &target_path {
-                    println!("rule already exists.");
-                    println!(
-                        "Note: try \"lsty edit {}\" or \"lsty edit {}\" to edit the keyword or path.",
-                        keyword, target_path
-                    );
-                    process::exit(1)
-                }
-            } else {
-                obj.targets.insert(keyword, target_path.clone());
-                println!("rule added.");
+        if let Some(existing_target) = data.targets.get(&keyword) {
+            if existing_target == &target_path {
+                println!("rule already exists.");
+                println!(
+                    "Note: try \"lsty edit {}\" or \"lsty edit {}\" to edit the keyword or path.",
+                    keyword, target_path
+                );
+                process::exit(1)
             }
-        // case rule for the source doesn't exist
         } else {
-            self.set_new_rules(&mut data, keyword, source_path.to_string(), target_path);
+            data.targets.insert(keyword, target_path.clone());
+            println!("rule added.");
         }
-        self.save_json_data(&data)?;
+        // } else {
 
         Ok(())
     }
@@ -42,7 +35,7 @@ impl DataManager {
         &self,
         data: &mut DataModel,
         keyword: String,
-        source_path: String,
+        source_path: Utf8PathBuf,
         target_path: String,
     ) {
         let new_obj = DataObject {
