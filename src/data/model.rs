@@ -1,4 +1,3 @@
-use super::data_manager::{self, DataManager};
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, io};
@@ -20,7 +19,7 @@ impl DataModel {
         DataModel { data: Vec::new() }
     }
 
-    pub fn object_by_source(
+    pub fn object_by_source_mut(
         &mut self,
         source_path: Utf8PathBuf,
     ) -> Result<&mut DataObject, io::Error> {
@@ -31,10 +30,21 @@ impl DataModel {
         {
             Ok(obj)
         } else {
-            return Err(io::Error::new(
+            Err(io::Error::new(
                 io::ErrorKind::Other,
                 "no rules found for the current directory.",
-            ));
+            ))
+        }
+    }
+
+    pub fn object_by_source(&mut self, source_path: Utf8PathBuf) -> Result<&DataObject, io::Error> {
+        if let Some(obj) = self.data.iter().find(|o| o.source == source_path.as_str()) {
+            Ok(obj)
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::Other,
+                "no rules found for the current directory.",
+            ))
         }
     }
 }

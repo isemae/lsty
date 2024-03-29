@@ -15,11 +15,6 @@ use std::{
 };
 
 pub struct DataManager;
-// pub struct DataManager {
-// model: Box<dyn DataModelTrait>,
-// model: DataModel,
-// data: HashSet<String>,
-// }
 
 pub enum DataAction {
     Add,
@@ -48,17 +43,14 @@ impl From<&Commands> for DataAction {
 }
 
 impl DataManager {
-    pub fn new() -> Self {
-        DataManager
-    }
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> Result<(), io::Error> {
         let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel::new());
         let current_dir = Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default())
             .expect("valid Unicode path succeeded");
         match action {
-            DataAction::Add => match data.object_by_source(current_dir.clone()) {
+            DataAction::Add => match data.object_by_source_mut(current_dir.clone()) {
                 Ok(obj) => {
-                    self.print_rule_info(&args);
+                    self.print_rule_info(args);
                     match self.add_rule_to_json(
                         obj,
                         args.secondary_path.to_string(),
@@ -82,7 +74,7 @@ impl DataManager {
                     self.save_json_data(&data)?;
                 }
             },
-            DataAction::Delete => match data.object_by_source(current_dir) {
+            DataAction::Delete => match data.object_by_source_mut(current_dir) {
                 Ok(obj) => match self.remove_rule_from_json(obj, args.keyword.as_str()) {
                     Ok(_) => {
                         if menu::get_yn_input() {
@@ -103,22 +95,47 @@ impl DataManager {
                 Err(_) => {
                     return Err(io::Error::new(
                         io::ErrorKind::NotFound,
-                        "[!] no rule for the current path in the data",
+                        "[?] no rule for the current path in the data",
                     ));
                 }
             },
-            DataAction::Scan => match data.object_by_source(current_dir) {
+            DataAction::Scan => match data.object_by_source_mut(current_dir) {
                 Ok(obj) => {
-                    self.scan_and_validate_path(&obj.targets);
+                    let maps = self.scan_current_path(obj, args.keyword.as_str())?;
+                    if maps.is_empty() {
+                        println!("\x1b[0;32m[✓]\x1b[0m no entries to move. ")
+                    } else {
+                        println!("ENTRIES IN SOURCE: ");
+                        for entries in maps {
+                            println!(" TARGET: {}", entries.0);
+                            for entry in entries.1 {
+                                let entry_symbol = menu::entry_symbol(&entry);
+                                println!("  {} {}", entry_symbol, entry)
+                            }
+                            println!()
+                        }
+                        match menu::get_mq_input() {
+                            true => {
+                                if let Err(err) = self.rename_entries(obj, &args.keyword) {
+                                    println!("Error moving entries: {}", err);
+                                }
+                            }
+                            false => {}
+                        }
+                    }
                 }
-                Err(_) => {}
-            },
-            DataAction::Move => match data.object_by_source(current_dir) {
-                Ok(obj) => {
-                    self.move_dirs(&obj.targets, args.keyword.as_str())?;
+                Err(_) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        "[?] no rule for the current path in the data",
+                    ));
                 }
-                Err(_) => {}
             },
+            DataAction::Move => {
+                if let Ok(obj) = data.object_by_source(current_dir) {
+                    self.rename_entries(obj, args.keyword.as_str())?;
+                }
+            }
             DataAction::Import => {
                 println!("{:?}", args);
                 match self.import_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
@@ -132,16 +149,15 @@ impl DataManager {
             DataAction::Edit => {
                 self.edit_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
             }
-            DataAction::Alias => match data.object_by_source(current_dir) {
-                Ok(obj) => {
+            DataAction::Alias => {
+                if let Ok(obj) = data.object_by_source_mut(current_dir) {
                     self.set_alias(obj, args.keyword.clone());
                     match self.save_json_data(&data) {
                         Ok(()) => {}
                         Err(e) => eprintln!("{}", e),
                     };
                 }
-                Err(_) => {}
-            },
+            }
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
         }
         Ok(())

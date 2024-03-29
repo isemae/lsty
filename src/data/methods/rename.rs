@@ -1,7 +1,9 @@
-use crate::{cli::menu, data::data_manager::DataManager};
-use regex::Regex;
+use crate::{
+    cli::menu,
+    data::{data_manager::DataManager, model::DataObject},
+};
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::HashMap,
     env::current_dir,
     fs::{self, DirEntry},
     io,
@@ -18,57 +20,31 @@ impl DataManager {
         };
         entry_name.to_string_lossy().nfc().collect::<String>()
     }
+    fn validate_pair(&self, targets: &HashMap<String, String>) -> Option<HashMap<String, String>> {
+        let mut valid_pair = HashMap::new();
 
-    fn generate_new_entries(
-        &self,
-        source: &str,
-        target_map: &HashMap<String, String>,
-        keyword: &str,
-    ) -> Result<HashMap<String, Vec<String>>, io::Error> {
-        let entries = fs::read_dir(source)?;
-        let mut entry_map: HashMap<String, Vec<String>> = HashMap::new();
-        let mut patterns = HashMap::new();
-
-        for entry in entries {
-            let entry = entry?;
-            let entry_name = self.normalize_entry(&entry);
-
-            let keywords = if !keyword.is_empty() {
-                vec![keyword.to_string()]
+        for map in targets.iter() {
+            if !PathBuf::from(map.1).exists() {
+                eprintln!(
+                            " \x1b[0;33m[!] target path '{}' doesn't exist. Creating the directory...\x1b[0m",
+                            map.1
+                        );
+                fs::create_dir_all(map.1)
+                    .expect("Error: failed to create target directory on disk.");
+                valid_pair.insert(map.0.clone(), map.1.clone());
             } else {
-                target_map.keys().cloned().collect()
-            };
-
-            for kw in &keywords {
-                let lowercase_kw = kw.to_lowercase();
-                let pattern = match patterns.entry(kw.to_lowercase()) {
-                    Entry::Occupied(entry) => entry.into_mut(),
-                    Entry::Vacant(entry) => entry.insert(Regex::new(&lowercase_kw).unwrap()),
-                };
-                if let Some(target) = target_map.get(&lowercase_kw) {
-                    let lowercase_entry_name = entry_name.to_lowercase();
-                    if pattern.is_match(&lowercase_entry_name) {
-                        entry_map
-                            .entry(target.to_string())
-                            .or_default()
-                            .push(entry_name.clone())
-                    }
-                }
+                valid_pair.insert(map.0.clone(), map.1.clone());
             }
         }
-        Ok(entry_map)
+        Some(valid_pair)
     }
 
-    pub fn move_dirs(
-        &self,
-        target_map: &HashMap<String, String>,
-        keyword: &str,
-    ) -> Result<(), io::Error> {
+    pub fn rename_entries(&self, data: &DataObject, keyword: &str) -> Result<(), io::Error> {
         let mut moved_count = 0;
         let current_dir = current_dir()?;
         let current_dir_str = current_dir.to_str().expect("");
 
-        let entries_map = self.generate_new_entries(current_dir_str, target_map, keyword)?;
+        let entries_map = self.scan_current_path(data, keyword)?;
         println!("\nSOURCE: {}", current_dir_str);
         for (target, vec) in entries_map {
             println!("\r└→ \x1b[4m{}\x1b[0m\x1b[0m ", target);
@@ -86,7 +62,7 @@ impl DataManager {
                             continue;
                         }
                         false => {
-                            self.scan_and_validate_path(target_map).unwrap();
+                            self.validate_pair(&data.targets).unwrap();
                             self.move_entry(entry.clone(), new_entry);
                             println!("  \x1b[0;32m[✓]\x1b[0m {} {}", entry_symbol, entry);
                             moved_count += 1;
@@ -122,11 +98,20 @@ impl DataManager {
         }
     }
 
-    fn copy_dir(&self, src: &PathBuf, trg: &PathBuf) -> std::io::Result<()> {
+    fn copy_dir(&self, src: &PathBuf, trg: &Path) -> std::io::Result<()> {
         for entry in fs::read_dir(src)? {
             let entry = entry?;
             let file_path = entry.path();
-            let file_name = file_path.file_name().unwrap().to_str().unwrap();
+            let file_name = file_path
+                .file_name()
+                .and_then(|name_osstr| name_osstr.to_str())
+                .ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::NotFound,
+                        "[?] no rule for the current path in the data",
+                    )
+                })?;
+
             let new_path = trg.join(file_name);
             if file_path.is_dir() {
                 fs::create_dir_all(&new_path)?;

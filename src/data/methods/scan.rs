@@ -1,51 +1,47 @@
-use crate::data::{
-    data_manager::DataManager,
-    model::{DataModel, DataObject},
+use crate::data::{data_manager::DataManager, model::DataObject};
+use regex::Regex;
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    fs, io,
 };
-use std::{collections::HashMap, fs, path::PathBuf};
 
 impl DataManager {
-    pub fn scan_and_validate_path(
+    pub fn scan_current_path(
         &self,
-        targets: &HashMap<String, String>,
-    ) -> Option<HashMap<String, String>> {
-        let mut valid_pair = HashMap::new();
+        data: &DataObject,
+        keyword: &str,
+    ) -> Result<HashMap<String, Vec<String>>, io::Error> {
+        let entries = fs::read_dir(&data.source)?;
+        let mut entry_map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut patterns = HashMap::new();
 
-        for map in targets.iter() {
-            if !PathBuf::from(map.1).exists() {
-                eprintln!(
-                            " \x1b[0;33m[!] target path '{}' doesn't exist. Creating the directory...\x1b[0m",
-                            map.1
-                        );
-                fs::create_dir_all(map.1)
-                    .expect("Error: failed to create target directory on disk.");
-                valid_pair.insert(map.0.clone(), map.1.clone());
+        for entry in entries {
+            let entry = entry?;
+            let entry_name = self.normalize_entry(&entry);
+
+            let keywords = if !keyword.is_empty() {
+                vec![keyword.to_string()]
             } else {
-                valid_pair.insert(map.0.clone(), map.1.clone());
+                data.targets.keys().cloned().collect()
+            };
+
+            for kw in &keywords {
+                let lowercase_kw = kw.to_lowercase();
+                let pattern = match patterns.entry(kw.to_lowercase()) {
+                    Entry::Occupied(entry) => entry.into_mut(),
+                    Entry::Vacant(entry) => entry.insert(Regex::new(&lowercase_kw).unwrap()),
+                };
+                if let Some(target) = data.targets.get(&lowercase_kw) {
+                    let lowercase_entry_name = entry_name.to_lowercase();
+                    if pattern.is_match(&lowercase_entry_name) {
+                        entry_map
+                            .entry(target.to_string())
+                            .or_default()
+                            .push(entry_name.clone())
+                    }
+                }
             }
         }
-        Some(valid_pair)
+        Ok(entry_map)
     }
-    // None
 }
-// }
-// if !Path::new(source_path).exists() {
-//     eprintln!(
-//         "\x1b[0;31m ✘ Source path {} is not a valid path.\x1b[0m",
-//         source_path.yellow()
-//     );
-//     return Some(Err(io::Error::new(
-//         io::ErrorKind::NotFound,
-//         "no such directory exists.",
-//     )));
-// }
-// if !Path::new(&target).is_dir() {
-//     eprintln!(
-//         "\x1b[0;33m⚠ target path '{}' doesn't exist. Creating the directory...\x1b[0m",
-//         target
-//     );
-//     fs::create_dir_all(&target)
-//         .expect("Error: failed to create target directory on disk.");
-// } else {
-//     println!("hehe")
-// }
