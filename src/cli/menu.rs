@@ -1,139 +1,8 @@
 extern crate crossterm;
-use crate::data::{data_manager, model::DataModel};
-use crossterm::{
-    event::{read, Event, KeyCode},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
-};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
+use std::io::{self, Write};
 use std::path::Path;
-
-pub enum MenuAction {
-    Default,
-    Delete,
-    Pair,
-    Unset,
-}
-
-pub fn navigate_menu(action: MenuAction) {
-    let mut cursor_x: usize = 0;
-    let mut cursor_y = 0;
-
-    let mut stage_num = 0;
-    let data_manager = data_manager::DataManager::new();
-    let data = data_manager.parse_json_data();
-    let index = "";
-    // if let Some(items) = data.get_mut(index).and_then(|p| p.as_array_mut()) {}
-    // println!("{:?}", menu);
-
-    let default_submenu = &["[s] SCAN", "[l] LINK", "[u] UNSET"];
-    // let pair_submenu = &menu
-    //     .targets
-    //     .iter()
-    //     .map(|target| target.target_path.as_str())
-    //     .collect::<Vec<&str>>();
-
-    enable_raw_mode().expect("Failed to enable raw mode");
-    let submenu: &[&str] = match action {
-        MenuAction::Default => default_submenu,
-        // MenuAction::Pair => submenu = pair_submenu,
-        // MenuAction::Delete => data = data.pairs,
-        _ => &[""],
-    };
-
-    loop {
-        execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
-        print_stage(
-            data.as_ref().unwrap(),
-            stage_num,
-            cursor_y,
-            cursor_x,
-            submenu,
-        );
-
-        if let Event::Key(event) = read().unwrap() {
-            match event.code {
-                KeyCode::Up | KeyCode::Char('k') => {
-                    if stage_num != 1 && cursor_y > 0 {
-                        cursor_y -= 1;
-                    }
-                }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    // if stage_num != 1 && cursor_y < menu.pairs.len() {
-                    cursor_y += 1;
-                    // }
-                }
-                KeyCode::Right | KeyCode::Char('l') => {
-                    if cursor_x < submenu.len() - 1 {
-                        cursor_x += 1;
-                    }
-                }
-                KeyCode::Left | KeyCode::Char('h') => {
-                    if cursor_x > 0 {
-                        cursor_x -= 1;
-                    }
-                }
-                KeyCode::Enter => {
-                    if stage_num == submenu.len() - 1 - 1 {
-                        break;
-                    }
-                    stage_num += 1;
-                }
-                KeyCode::Backspace => {
-                    while stage_num > 0 {
-                        stage_num -= 1;
-                    }
-                }
-                KeyCode::Esc => {
-                    break;
-                }
-                _ => {}
-            }
-        }
-    }
-    disable_raw_mode().expect("Failed to disable raw mode");
-    println!("\r");
-}
-
-fn print_stage(
-    data: &DataModel,
-    stage_num: usize,
-    cursor_y: usize,
-    cursor_x: usize,
-    submenu: &[&str],
-) {
-    match stage_num {
-        0 => print_menu(data, cursor_y),
-        1 => {
-            println!("\r");
-            // println!("\x1B[33m{:?} \r", data.pairs[cursor_y]);
-            println!("\x1B[0m\n");
-
-            print_submenu(submenu, cursor_x);
-        }
-        _ => {}
-    }
-}
-
-fn print_menu(menu: &DataModel, cursor_y: usize) {
-    for (i, source) in menu.data.iter().enumerate() {
-        if i == cursor_y {
-            println!("> {:?} \r", source);
-        } else {
-            println!("  {:?} \r", source);
-        }
-    }
-}
-
-fn print_submenu(submenu: &[&str], cursor_x: usize) {
-    for (i, submenu_item) in submenu.iter().enumerate() {
-        if i == cursor_x {
-            print!("\x1B[4m{}\x1B[0m  ", submenu_item);
-        } else {
-            print!("{}  ", submenu_item);
-        }
-    }
-    println!("\r");
-}
+use termion::{cursor, event::Key, input::TermRead};
 
 pub fn entry_symbol<T: AsRef<Path>>(entry: T) -> String {
     let entry = entry.as_ref();
@@ -150,29 +19,58 @@ pub fn entry_symbol<T: AsRef<Path>>(entry: T) -> String {
 }
 
 pub fn get_yn_input() -> bool {
-    // let mut input = String::new();
-    // io::stdin()
-    //     .read_to_string(&mut input)
-    //     .expect("Failed to read line");
-
-    // let filtered_input: String = input.chars().filter(|&c| "ynYN".contains(c)).collect();
     enable_raw_mode().expect("Failed to enable raw mode");
-    loop {
-        if let Ok(Event::Key(event)) = read() {
-            execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
-            match event.code {
-                KeyCode::Char('y') | KeyCode::Char('ㅛ') => {
-                    disable_raw_mode().expect("Failed to disable raw mode");
-                    return true;
-                }
-                KeyCode::Char('n') | KeyCode::Char('ㅜ') => {
-                    disable_raw_mode().expect("Failed to disable raw mode");
-                    return false;
-                }
-                _ => {
-                    println!("y/N:");
-                }
+    print_yn_prompt().expect("Failed to print prompt");
+
+    for key in io::stdin().keys() {
+        match key.unwrap() {
+            Key::Char('y') | Key::Char('Y') | Key::Char('ㅛ') => {
+                disable_raw_mode().expect("Failed to disable raw mode");
+                return true;
             }
+            Key::Char('n') | Key::Char('N') | Key::Char('ㅜ') | Key::Esc => {
+                disable_raw_mode().expect("Failed to disable raw mode");
+                return false;
+            }
+            _ => {}
         }
     }
+    unreachable!();
+}
+
+pub fn get_mq_input() -> bool {
+    enable_raw_mode().expect("Failed to enable raw mode");
+    print_mq_prompt().expect("Failed to print prompt");
+
+    for key in io::stdin().keys() {
+        match key.unwrap() {
+            Key::Char('m') | Key::Char('M') | Key::Char('ㅡ') => {
+                disable_raw_mode().expect("Failed to disable raw mode");
+                return true;
+            }
+            Key::Char('q') | Key::Char('Q') | Key::Char('ㅂ') | Key::Esc => {
+                disable_raw_mode().expect("Failed to disable raw mode");
+                return false;
+            }
+            _ => {}
+        }
+    }
+    unreachable!();
+}
+
+pub fn print_yn_prompt() -> io::Result<()> {
+    print!("{}", cursor::Save);
+    print!("{}", cursor::Goto(1, termion::terminal_size().unwrap().1));
+    print!("{}", cursor::Restore);
+    io::stdout().flush()?;
+    Ok(())
+}
+
+pub fn print_mq_prompt() -> io::Result<()> {
+    print!("{}", cursor::Save);
+    print!("{}", cursor::Goto(1, termion::terminal_size().unwrap().1));
+    println!("PRESS 'm' to move entries or 'q' to quit...");
+    print!("{}", cursor::Restore);
+    io::stdout().flush()?;
+    Ok(())
 }
