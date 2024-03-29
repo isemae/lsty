@@ -13,7 +13,7 @@ impl DataManager {
         &self,
         data: &mut DataModel,
         alias: String,
-        mut source_path: String,
+        mut import_path: String,
     ) -> Result<(), io::Error> {
         let current_dir = Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default())
             .expect("valid Unicode path succeeded");
@@ -29,31 +29,34 @@ impl DataManager {
         if let Some(data_map) = data
             .data
             .iter()
-            .find(|obj| obj.source == source_path || obj.alias == alias && !alias.is_empty())
+            .find(|obj| obj.source == import_path || obj.alias == alias && !alias.is_empty())
         {
-            if source_path.is_empty() {
-                source_path = data_map.source.clone();
+            if import_path.is_empty() {
+                import_path = data_map.source.clone();
             }
 
             let targets = data_map.targets.clone();
-            let current_obj = data.data.iter_mut().find(|o| o.source == current_dir);
+            let current_obj = match data.object_by_source(current_dir.clone()) {
+                Ok(obj) => obj,
+                Err(_) => {
+                    data.data.push(DataObject {
+                        alias: "".to_string(),
+                        source: current_dir.clone().to_string(),
+                        targets: HashMap::new(),
+                    });
+                    data.data.last_mut().unwrap()
+                }
+            };
 
             println!("do you want to import rules: ");
             for (k, v) in &targets {
                 println!("  keyword: {}, target path: {}", k, v);
             }
-            println!("from {}?", source_path);
+            println!("from {}?", import_path);
 
             match menu::get_yn_input() {
                 true => {
-                    current_obj
-                        .unwrap_or(&mut DataObject {
-                            alias: "".to_string(),
-                            source: current_dir.to_string(),
-                            targets: HashMap::new(),
-                        })
-                        .targets
-                        .extend(targets);
+                    current_obj.targets.extend(targets);
                     self.save_json_data(data)?;
                     println!("rules imported.")
                 }
