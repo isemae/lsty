@@ -14,10 +14,7 @@ impl DataManager {
             let target_path = targets
                 .get(&keyword)
                 .expect("found no target path for the key.");
-            println!(
-                "would you like to change keyword for the rule? {} -> {} (y/N)",
-                keyword, replacement
-            );
+            println!("[y/N] change keyword '{}' -> '{}'?", keyword, replacement);
 
             match menu::get_yn_input() {
                 true => {
@@ -29,6 +26,6 @@ impl DataManager {
         } else {
             eprintln!("no such rule for the keyword");
         }
-        self.save_json_data(&data).expect("");
+        self.save_json_data(data).expect("");
     }
 }

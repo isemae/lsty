@@ -96,7 +96,7 @@ impl Commands {
                 if target_path.is_some() {
                     target_path.clone().unwrap()
                 } else {
-                    println!("target path is not provided. set the target path to the keyword in the current directory? (y/N):");
+                    println!("[y/N] target path is not provided. make a new target path to the keyword in the current directory?");
                     match menu::get_yn_input() {
                         true => {
                             println!(
@@ -157,9 +157,10 @@ impl Commands {
             _ => SubArgs::new("".to_string(), default_path.clone(), default_path),
         };
 
-        data_manager
-            .match_action(DataAction::from(self), sub_args)
-            .expect("failed to match data action.");
+        match data_manager.match_action(DataAction::from(self), sub_args) {
+            Ok(()) => {}
+            Err(e) => eprintln!("{}", e),
+        }
         Ok(())
     }
 }

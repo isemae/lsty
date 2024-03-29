@@ -2,7 +2,7 @@ mod cli;
 mod commands;
 mod data;
 
-use clap::{Args, Parser};
+use clap::Parser;
 use commands::{arguments, command_manager};
 
 fn main() {

@@ -36,7 +36,7 @@ impl DataManager {
             }
 
             let targets = data_map.targets.clone();
-            let current_obj = match data.object_by_source(current_dir.clone()) {
+            let current_obj = match data.object_by_source_mut(current_dir.clone()) {
                 Ok(obj) => obj,
                 Err(_) => {
                     data.data.push(DataObject {
