@@ -139,21 +139,21 @@ impl DataManager {
             }
             DataAction::Alias => {
                 if let Some(o) = data.data.iter().find(|o| o.alias == args.keyword) {
-                    eprintln!(
-                        "{} '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
-                        status_symbol(&Error),
-                        args.keyword,
-                        o.source
-                    )
-                } else {
-                    if let Ok(obj) = data.object_by_source_mut(current_dir) {
-                        if menu::get_yn_input(format!(
-                            "{} update alias '{}' -> '{}'?",
-                            status_symbol(&YN),
-                            obj.alias,
-                            args.keyword
-                        )) {
-                            self.set_alias(obj, args.keyword.clone());
+                    return Err(io::Error::new(
+                        io::ErrorKind::AlreadyExists,
+                        format!(
+                            "{} '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
+                            status_symbol(&Error),
+                            args.keyword,
+                            o.source
+                        ),
+                    ));
+                } else if let Ok(obj) = data.object_by_source_mut(current_dir) {
+                    match self.set_alias(obj, args.keyword.clone()) {
+                        Err(e) => {
+                            eprintln!("{}", e)
+                        }
+                        Ok(_) => {
                             println!("updated alias: {} -> {}", obj.alias, args.keyword);
                             self.save_json_data(&data)?
                         }
