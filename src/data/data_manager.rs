@@ -1,5 +1,8 @@
 use crate::{
-    cli::menu,
+    cli::{
+        menu,
+        status_symbols::{status_symbol, Status::*},
+    },
     commands::arguments::{Commands, SubArgs},
     data::model::DataModel,
 };
@@ -82,13 +85,16 @@ impl DataManager {
                 Err(_) => {
                     return Err(io::Error::new(
                         io::ErrorKind::NotFound,
-                        "[?] no rule for the current path in the data",
+                        format!(
+                            "{} no rule for the current path in the data",
+                            status_symbol(&Error)
+                        ),
                     ));
                 }
                 Ok(obj) => {
                     let maps = self.scan_current_path(obj, args.keyword.as_str())?;
                     if maps.is_empty() {
-                        println!("\x1b[0;32m[✓]\x1b[0m no entries to move.")
+                        println!("{} no entries to move.", status_symbol(&Safe))
                     } else {
                         println!("ENTRIES IN SOURCE: ");
                         for entries in maps {
@@ -134,14 +140,18 @@ impl DataManager {
             DataAction::Alias => {
                 if let Some(o) = data.data.iter().find(|o| o.alias == args.keyword) {
                     eprintln!(
-                        "[!] '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
-                        args.keyword, o.source
+                        "{} '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
+                        status_symbol(&Error),
+                        args.keyword,
+                        o.source
                     )
                 } else {
                     if let Ok(obj) = data.object_by_source_mut(current_dir) {
                         if menu::get_yn_input(format!(
-                            "[y/N] update alias '{}' -> '{}'?",
-                            obj.alias, args.keyword
+                            "{} update alias '{}' -> '{}'?",
+                            status_symbol(&YN),
+                            obj.alias,
+                            args.keyword
                         )) {
                             self.set_alias(obj, args.keyword.clone());
                             println!("updated alias: {} -> {}", obj.alias, args.keyword);

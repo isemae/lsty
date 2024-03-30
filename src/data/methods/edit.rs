@@ -1,5 +1,8 @@
 use crate::{
-    cli::menu,
+    cli::{
+        menu,
+        status_symbols::{status_symbol, Status::*},
+    },
     data::{data_manager::DataManager, model::DataObject},
 };
 use camino::Utf8PathBuf;
@@ -12,13 +15,18 @@ impl DataManager {
             let is_replacement_dir = Utf8PathBuf::from(&replacement).is_dir();
             let confirmation = if is_replacement_dir {
                 format!(
-                "[y/N] change target path '\x1b[4m{}\x1b[0m\x1b[0m' -> '\x1b[4m{}\x1b[0m\x1b[0m' for keyword '{}' ?",
-                target_path, replacement, keyword)
+                "{0} change target path '\x1b[4m{1}\x1b[0m\x1b[0m' -> '\x1b[4m{2}\x1b[0m\x1b[0m' for keyword '{3}'?",
+                status_symbol(&YN),target_path, replacement, keyword)
             } else if !replacement.contains('\\')
                 && !replacement.contains('/')
                 && !replacement.contains('~')
             {
-                format!("[y/N] change keyword '{}' -> '{}'?", keyword, replacement)
+                format!(
+                    "{0} change keyword '{1}' -> '{2}'?",
+                    status_symbol(&YN),
+                    keyword,
+                    replacement
+                )
             } else {
                 eprintln!("invalid path.");
                 return;

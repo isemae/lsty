@@ -1,5 +1,8 @@
 use crate::{
-    cli::menu,
+    cli::{
+        menu,
+        status_symbols::{status_symbol, Status::*},
+    },
     data::{data_manager::DataManager, model::DataObject},
 };
 use std::{
@@ -26,8 +29,8 @@ impl DataManager {
         for map in targets.iter() {
             if !PathBuf::from(map.1).exists() {
                 eprintln!(
-                            " \x1b[0;33m[!] target path '{}' doesn't exist. Creating the directory...\x1b[0m",
-                            map.1
+                            " {} \x1b[0;33mtarget path '{}' doesn't exist. Creating the directory...\x1b[0m",
+                            status_symbol(&Caution),map.1
                         );
                 fs::create_dir_all(map.1)
                     .expect("Error: failed to create target directory on disk.");
@@ -56,15 +59,17 @@ impl DataManager {
                     match Path::new(&new_entry).exists() {
                         true => {
                             println!(
-                                "  \x1b[0;33m[!]\x1b[0m {} {} already exists in the target directory.",
-                                entry_symbol, entry
+                                "  {0} {1} {2} already exists in the target directory.",
+                                status_symbol(&Caution),
+                                entry_symbol,
+                                entry
                             );
                             continue;
                         }
                         false => {
                             self.validate_pair(&data.targets).unwrap();
                             self.move_entry(entry.clone(), new_entry);
-                            println!("  \x1b[0;32m[✓]\x1b[0m {} {}", entry_symbol, entry);
+                            println!("  {0} {1} {2}", status_symbol(&Safe), entry_symbol, entry);
                             moved_count += 1;
                         }
                     }
@@ -72,7 +77,10 @@ impl DataManager {
             }
         }
         if moved_count == 0 {
-            println!("[✓] No items to move in the source path.");
+            println!(
+                "{} No items to move in the source path.",
+                status_symbol(&Safe)
+            );
         } else {
             println!("\nDone.")
         }
@@ -107,7 +115,10 @@ impl DataManager {
                 .file_name()
                 .and_then(|name_osstr| name_osstr.to_str())
                 .ok_or_else(|| {
-                    io::Error::new(io::ErrorKind::NotFound, "[?] no rule for the current path.")
+                    io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!("{} no rule for the current path.", status_symbol(&NotFound)),
+                    )
                 })?;
 
             let new_path = trg.join(file_name);

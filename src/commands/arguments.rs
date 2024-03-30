@@ -1,5 +1,8 @@
 use crate::{
-    cli::menu,
+    cli::{
+        menu,
+        status_symbols::{status_symbol, Status::*},
+    },
     data::data_manager::{DataAction, DataManager},
 };
 use camino::Utf8PathBuf;
@@ -96,7 +99,7 @@ impl Commands {
                 if target_path.is_some() {
                     target_path.clone().unwrap()
                 } else {
-                    match menu::get_yn_input("[y/N] target path is not provided. make a new target path to the keyword in the current directory?".to_string()) {
+                    match menu::get_yn_input(format!("{} target path is not provided. make a new target path to the keyword in the current directory?", status_symbol(&YN))) {
                         true => {
                             println!(
                                 "Note: the actual directory doesn't exist yet. it will be created later when the files are being moved."
