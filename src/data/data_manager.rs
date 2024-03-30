@@ -11,7 +11,6 @@ use std::{
     env,
     fs::File,
     io::{self, prelude::*},
-    process,
 };
 
 pub struct DataManager;
@@ -48,58 +47,44 @@ impl DataManager {
         let current_dir = Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default())
             .expect("valid Unicode path succeeded");
         match action {
-            DataAction::Add => match data.object_by_source_mut(current_dir.clone()) {
-                Ok(obj) => {
-                    self.print_rule_info(args);
-                    match self.add_rule_to_json(
-                        obj,
-                        args.secondary_path.to_string(),
-                        args.keyword.clone(),
-                    ) {
-                        Ok(()) => {}
-                        Err(e) => {
-                            eprintln!("Error: {}", e);
-                            process::exit(1);
-                        }
-                    };
-                    self.save_json_data(&data)?;
+            DataAction::Add => {
+                match data.object_by_source_mut(current_dir.clone()) {
+                    Err(_) => {
+                        self.set_new_rules(
+                            &mut data,
+                            args.keyword.clone(),
+                            current_dir,
+                            args.secondary_path.clone(),
+                        );
+                    }
+                    Ok(obj) => {
+                        self.print_rule_info(args);
+                        self.add_rule_to_json(
+                            obj,
+                            args.secondary_path.to_string(),
+                            args.keyword.clone(),
+                        )?;
+                    }
                 }
-                Err(_) => {
-                    self.set_new_rules(
-                        &mut data,
-                        args.keyword.clone(),
-                        current_dir,
-                        args.secondary_path.clone(),
-                    );
+                self.save_json_data(&data)?;
+            }
+            DataAction::Delete => match data.object_by_source_mut(current_dir) {
+                Err(e) => {
+                    eprintln!("{}", e)
+                }
+                Ok(obj) => {
+                    self.remove_rule_from_json(obj, args.keyword.as_str())?;
+                    println!("deleted rule successfully.");
                     self.save_json_data(&data)?;
                 }
             },
-            DataAction::Delete => match data.object_by_source_mut(current_dir) {
-                Ok(obj) => match self.remove_rule_from_json(obj, args.keyword.as_str()) {
-                    Ok(_) => {
-                        if menu::get_yn_input() {
-                            match self.save_json_data(&data) {
-                                Ok(()) => {
-                                    println!("deleted rule successfully.")
-                                }
-                                Err(e) => {
-                                    eprintln!("{}", e);
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("{}", e)
-                    }
-                },
+            DataAction::Scan => match data.object_by_source_mut(current_dir) {
                 Err(_) => {
                     return Err(io::Error::new(
                         io::ErrorKind::NotFound,
                         "[?] no rule for the current path in the data",
                     ));
                 }
-            },
-            DataAction::Scan => match data.object_by_source_mut(current_dir) {
                 Ok(obj) => {
                     let maps = self.scan_current_path(obj, args.keyword.as_str())?;
                     if maps.is_empty() {
@@ -114,21 +99,13 @@ impl DataManager {
                             }
                             println!()
                         }
-                        match menu::get_mq_input() {
-                            true => {
-                                if let Err(err) = self.rename_entries(obj, &args.keyword) {
-                                    println!("Error moving entries: {}", err);
-                                }
+                        if menu::get_mq_input() {
+                            match self.rename_entries(obj, &args.keyword) {
+                                Ok(_) => {}
+                                Err(err) => println!("Error moving entries: {}", err),
                             }
-                            false => {}
                         }
                     }
-                }
-                Err(_) => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::NotFound,
-                        "[?] no rule for the current path in the data",
-                    ));
                 }
             },
             DataAction::Move => {
@@ -138,21 +115,19 @@ impl DataManager {
             }
             DataAction::Import => {
                 println!("{:?}", args);
-                match self.import_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
+                if let Err(e) =
+                    self.import_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
                 {
-                    Ok(()) => {}
-                    Err(e) => {
-                        eprintln!("Error: {}", e)
-                    }
+                    eprintln!("Error: {}", e)
                 }
             }
             DataAction::Edit => {
                 match data.object_by_source_mut(current_dir) {
-                    Ok(obj) => {
-                        self.edit_rule(obj, args.keyword.clone(), args.secondary_path.clone())
-                    }
                     Err(_) => {
                         eprintln!("no such rule for the keyword");
+                    }
+                    Ok(obj) => {
+                        self.edit_rule(obj, args.keyword.clone(), args.secondary_path.clone())
                     }
                 }
                 self.save_json_data(&data).expect("");
@@ -175,6 +150,10 @@ impl DataManager {
         let exe_path = env::current_exe().unwrap();
         let exe_dir = exe_path.parent().unwrap();
         match File::open(exe_dir.join("lsty.json")) {
+            Err(e) => Err(serde_json::Error::custom(format!(
+                "failed to load data file: {}",
+                e
+            ))),
             Ok(mut file) => {
                 let mut data = String::new();
                 match file.read_to_string(&mut data) {
@@ -183,10 +162,6 @@ impl DataManager {
                 }
                 serde_json::from_str(data.as_str())
             }
-            Err(e) => Err(serde_json::Error::custom(format!(
-                "failed to load data file: {}",
-                e
-            ))),
         }
     }
 

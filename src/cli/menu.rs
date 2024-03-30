@@ -21,7 +21,8 @@ pub fn entry_symbol<T: AsRef<Path>>(entry: T) -> String {
     }
 }
 
-pub fn get_yn_input() -> bool {
+pub fn get_yn_input(msg: String) -> bool {
+    println!("{}", msg);
     enable_raw_mode().expect("Failed to enable raw mode");
     print_yn_prompt().expect("Failed to print prompt");
 

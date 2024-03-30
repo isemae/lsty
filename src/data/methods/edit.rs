@@ -11,11 +11,10 @@ impl DataManager {
         if let Some(target_path) = targets.get(&keyword) {
             let is_replacement_dir = Utf8PathBuf::from(&replacement).is_dir();
             if is_replacement_dir {
-                println!(
+                if menu::get_yn_input(format!(
                     "[y/N] change target path '\x1b[4m{}\x1b[0m\x1b[0m' -> '\x1b[4m{}\x1b[0m\x1b[0m' for the keyword '{}' ?",
                     target_path, replacement, keyword
-                );
-                if menu::get_yn_input() {
+                )) {
                     obj.targets.remove(&keyword);
                     obj.targets.insert(keyword, replacement);
                 } else {
@@ -25,8 +24,10 @@ impl DataManager {
                 && !replacement.contains('/')
                 && !replacement.contains('~')
             {
-                println!("[y/N] change keyword '{}' -> '{}'?", keyword, replacement);
-                if menu::get_yn_input() {
+                if menu::get_yn_input(format!(
+                    "[y/N] change keyword '{}' -> '{}'?",
+                    keyword, replacement
+                )) {
                     obj.targets.remove(&keyword);
                     obj.targets.insert(replacement, target_path.to_string());
                 } else {

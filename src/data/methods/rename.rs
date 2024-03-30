@@ -98,6 +98,7 @@ impl DataManager {
         }
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn copy_dir(&self, src: &PathBuf, trg: &Path) -> std::io::Result<()> {
         for entry in fs::read_dir(src)? {
             let entry = entry?;

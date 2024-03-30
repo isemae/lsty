@@ -10,8 +10,10 @@ impl DataManager {
             eprintln!("[!] invalid alias: alias should not contain '/' or '\\'.");
             process::exit(1);
         } else {
-            println!("[y/N] update alias '{}' -> '{}'?", data.alias, alias);
-            match menu::get_yn_input() {
+            match menu::get_yn_input(format!(
+                "[y/N] update alias '{}' -> '{}'?",
+                data.alias, alias
+            )) {
                 true => {
                     println!("updated alias: {} -> {}", data.alias, alias);
                     data.alias = alias;

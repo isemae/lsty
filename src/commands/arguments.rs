@@ -96,8 +96,7 @@ impl Commands {
                 if target_path.is_some() {
                     target_path.clone().unwrap()
                 } else {
-                    println!("[y/N] target path is not provided. make a new target path to the keyword in the current directory?");
-                    match menu::get_yn_input() {
+                    match menu::get_yn_input("[y/N] target path is not provided. make a new target path to the keyword in the current directory?".to_string()) {
                         true => {
                             println!(
                                 "Note: the actual directory doesn't exist yet. it will be created later when the files are being moved."

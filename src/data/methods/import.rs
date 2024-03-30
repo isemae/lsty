@@ -52,9 +52,8 @@ impl DataManager {
             for (k, v) in &targets {
                 println!("  keyword: {}, target path: \x1b[4m{}\x1b[0m\x1b[0m", k, v);
             }
-            println!("from \x1b[4m{}\x1b[0m\x1b[0m?", import_path);
-
-            match menu::get_yn_input() {
+            println!();
+            match menu::get_yn_input(format!("from \x1b[4m{}\x1b[0m\x1b[0m?", import_path)) {
                 true => {
                     current_obj.targets.extend(targets);
                     self.save_json_data(data)?;

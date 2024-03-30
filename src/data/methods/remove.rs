@@ -1,7 +1,10 @@
 use crossterm::style::Stylize;
 
-use crate::data::{data_manager::DataManager, model::DataObject};
-use std::io;
+use crate::{
+    cli::menu,
+    data::{data_manager::DataManager, model::DataObject},
+};
+use std::{io, process};
 
 impl DataManager {
     pub fn remove_rule_from_json(
@@ -11,12 +14,15 @@ impl DataManager {
     ) -> Result<(), io::Error> {
         if data.targets.get(keyword).is_some() {
             let target_path = data.targets.get(keyword);
-            println!(
+            if menu::get_yn_input(format!(
                 "[y/N] delete rule for keyword '{}', target path '\x1b[4m{}\x1b[0m\x1b[0m'?",
                 keyword,
                 target_path.unwrap_or(&"".to_string())
-            );
-            data.targets.remove(keyword);
+            )) {
+                data.targets.remove(keyword);
+            } else {
+                process::exit(1)
+            }
             Ok(())
         } else {
             Err(io::Error::new(
