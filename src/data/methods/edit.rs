@@ -1,31 +1,40 @@
 use crate::{
     cli::menu,
-    data::{data_manager::DataManager, model::DataModel},
+    data::{data_manager::DataManager, model::DataObject},
 };
 use camino::Utf8PathBuf;
-use std::{env, process};
+use std::process;
 
 impl DataManager {
-    pub fn edit_rule(&self, data: &mut DataModel, keyword: String, replacement: String) {
-        let source_path = Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default())
-            .expect("valid Unicode path succeeded");
-        if let Some(obj) = data.data.iter_mut().find(|o| o.source == source_path) {
-            let targets = obj.targets.clone();
-            let target_path = targets
-                .get(&keyword)
-                .expect("found no target path for the key.");
-            println!("[y/N] change keyword '{}' -> '{}'?", keyword, replacement);
-
-            match menu::get_yn_input() {
-                true => {
+    pub fn edit_rule(&self, obj: &mut DataObject, keyword: String, replacement: String) {
+        let targets = obj.targets.clone();
+        if let Some(target_path) = targets.get(&keyword) {
+            let is_replacement_dir = Utf8PathBuf::from(&replacement).is_dir();
+            if is_replacement_dir {
+                println!(
+                    "[y/N] change target path '\x1b[4m{}\x1b[0m\x1b[0m' -> '\x1b[4m{}\x1b[0m\x1b[0m' for the keyword '{}' ?",
+                    target_path, replacement, keyword
+                );
+                if menu::get_yn_input() {
+                    obj.targets.remove(&keyword);
+                    obj.targets.insert(keyword, replacement);
+                } else {
+                    process::exit(1)
+                }
+            } else if !replacement.contains('\\')
+                && !replacement.contains('/')
+                && !replacement.contains('~')
+            {
+                println!("[y/N] change keyword '{}' -> '{}'?", keyword, replacement);
+                if menu::get_yn_input() {
                     obj.targets.remove(&keyword);
                     obj.targets.insert(replacement, target_path.to_string());
+                } else {
+                    process::exit(1)
                 }
-                false => process::exit(1),
+            } else {
+                eprintln!("invalid path.");
             }
-        } else {
-            eprintln!("no such rule for the keyword");
         }
-        self.save_json_data(data).expect("");
     }
 }

@@ -147,7 +147,15 @@ impl DataManager {
                 }
             }
             DataAction::Edit => {
-                self.edit_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
+                match data.object_by_source_mut(current_dir) {
+                    Ok(obj) => {
+                        self.edit_rule(obj, args.keyword.clone(), args.secondary_path.clone())
+                    }
+                    Err(_) => {
+                        eprintln!("no such rule for the keyword");
+                    }
+                }
+                self.save_json_data(&data).expect("");
             }
             DataAction::Alias => {
                 if let Ok(obj) = data.object_by_source_mut(current_dir) {
