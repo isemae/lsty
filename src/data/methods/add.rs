@@ -17,7 +17,7 @@ impl DataManager {
             if existing_target == &target_path {
                 println!("rule already exists.");
                 println!(
-                    "Note: try \"lsty edit {}\" or \"lsty edit {}\" to edit the keyword or path.",
+                    "Note: try \"lsty edit {}\" or \"lsty edit \x1b[4m{}\x1b[0m\x1b[0m\" to edit the keyword or path.",
                     keyword, target_path
                 );
                 process::exit(1)

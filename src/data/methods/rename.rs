@@ -45,7 +45,7 @@ impl DataManager {
         let current_dir_str = current_dir.to_str().expect("");
 
         let entries_map = self.scan_current_path(data, keyword)?;
-        println!("\nSOURCE: {}", current_dir_str);
+        println!("\nSOURCE: \x1b[4m{}\x1b[0m\x1b[0m", current_dir_str);
         for (target, vec) in entries_map {
             println!("\r└→ \x1b[4m{}\x1b[0m\x1b[0m ", target);
             for entry in vec.clone() {
@@ -106,10 +106,7 @@ impl DataManager {
                 .file_name()
                 .and_then(|name_osstr| name_osstr.to_str())
                 .ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::NotFound,
-                        "[?] no rule for the current path in the data",
-                    )
+                    io::Error::new(io::ErrorKind::NotFound, "[?] no rule for the current path.")
                 })?;
 
             let new_path = trg.join(file_name);

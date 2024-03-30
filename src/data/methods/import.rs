@@ -50,9 +50,9 @@ impl DataManager {
 
             println!("do you want to import rules: ");
             for (k, v) in &targets {
-                println!("  keyword: {}, target path: {}", k, v);
+                println!("  keyword: {}, target path: \x1b[4m{}\x1b[0m\x1b[0m", k, v);
             }
-            println!("from {}?", import_path);
+            println!("from \x1b[4m{}\x1b[0m\x1b[0m?", import_path);
 
             match menu::get_yn_input() {
                 true => {

@@ -12,7 +12,7 @@ impl DataManager {
         if data.targets.get(keyword).is_some() {
             let target_path = data.targets.get(keyword);
             println!(
-                "[y/N] delete rule for keyword '{}', target path '{}'?",
+                "[y/N] delete rule for keyword '{}', target path '\x1b[4m{}\x1b[0m\x1b[0m'?",
                 keyword,
                 target_path.unwrap_or(&"".to_string())
             );
