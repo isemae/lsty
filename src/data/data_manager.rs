@@ -88,7 +88,7 @@ impl DataManager {
                 Ok(obj) => {
                     let maps = self.scan_current_path(obj, args.keyword.as_str())?;
                     if maps.is_empty() {
-                        println!("\x1b[0;32m[✓]\x1b[0m no entries to move. ")
+                        println!("\x1b[0;32m[✓]\x1b[0m no entries to move.")
                     } else {
                         println!("ENTRIES IN SOURCE: ");
                         for entries in maps {
@@ -132,12 +132,22 @@ impl DataManager {
                 self.save_json_data(&data).expect("");
             }
             DataAction::Alias => {
-                if let Ok(obj) = data.object_by_source_mut(current_dir) {
-                    self.set_alias(obj, args.keyword.clone());
-                    match self.save_json_data(&data) {
-                        Ok(()) => {}
-                        Err(e) => eprintln!("{}", e),
-                    };
+                if let Some(o) = data.data.iter().find(|o| o.alias == args.keyword) {
+                    eprintln!(
+                        "[!] '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
+                        args.keyword, o.source
+                    )
+                } else {
+                    if let Ok(obj) = data.object_by_source_mut(current_dir) {
+                        if menu::get_yn_input(format!(
+                            "[y/N] update alias '{}' -> '{}'?",
+                            obj.alias, args.keyword
+                        )) {
+                            self.set_alias(obj, args.keyword.clone());
+                            println!("updated alias: {} -> {}", obj.alias, args.keyword);
+                            self.save_json_data(&data)?
+                        }
+                    }
                 }
             }
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),

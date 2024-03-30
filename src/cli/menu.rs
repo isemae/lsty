@@ -28,7 +28,6 @@ pub fn get_yn_input(msg: String) -> bool {
 
     loop {
         if let Ok(Event::Key(event)) = read() {
-            // execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
             match event.code {
                 KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Char('ㅛ') => {
                     disable_raw_mode().expect("Failed to disable raw mode");

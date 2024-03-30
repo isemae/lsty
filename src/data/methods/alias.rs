@@ -1,7 +1,4 @@
-use crate::{
-    cli::menu,
-    data::{data_manager::DataManager, model::DataObject},
-};
+use crate::data::{data_manager::DataManager, model::DataObject};
 use std::process;
 
 impl DataManager {
@@ -10,16 +7,7 @@ impl DataManager {
             eprintln!("[!] invalid alias: alias should not contain '/' or '\\'.");
             process::exit(1);
         } else {
-            match menu::get_yn_input(format!(
-                "[y/N] update alias '{}' -> '{}'?",
-                data.alias, alias
-            )) {
-                true => {
-                    println!("updated alias: {} -> {}", data.alias, alias);
-                    data.alias = alias;
-                }
-                false => (),
-            }
+            data.alias = alias;
         }
     }
 }
