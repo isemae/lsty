@@ -114,7 +114,6 @@ impl DataManager {
                 }
             }
             DataAction::Import => {
-                println!("{:?}", args);
                 if let Err(e) =
                     self.import_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
                 {

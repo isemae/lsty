@@ -10,32 +10,32 @@ impl DataManager {
         let targets = obj.targets.clone();
         if let Some(target_path) = targets.get(&keyword) {
             let is_replacement_dir = Utf8PathBuf::from(&replacement).is_dir();
-            if is_replacement_dir {
-                if menu::get_yn_input(format!(
-                    "[y/N] change target path '\x1b[4m{}\x1b[0m\x1b[0m' -> '\x1b[4m{}\x1b[0m\x1b[0m' for the keyword '{}' ?",
-                    target_path, replacement, keyword
-                )) {
-                    obj.targets.remove(&keyword);
-                    obj.targets.insert(keyword, replacement);
-                } else {
-                    process::exit(1)
-                }
+            let confirmation = if is_replacement_dir {
+                format!(
+                "[y/N] change target path '\x1b[4m{}\x1b[0m\x1b[0m' -> '\x1b[4m{}\x1b[0m\x1b[0m' for keyword '{}' ?",
+                target_path, replacement, keyword)
             } else if !replacement.contains('\\')
                 && !replacement.contains('/')
                 && !replacement.contains('~')
             {
-                if menu::get_yn_input(format!(
-                    "[y/N] change keyword '{}' -> '{}'?",
-                    keyword, replacement
-                )) {
-                    obj.targets.remove(&keyword);
-                    obj.targets.insert(replacement, target_path.to_string());
-                } else {
-                    process::exit(1)
-                }
+                format!("[y/N] change keyword '{}' -> '{}'?", keyword, replacement)
             } else {
                 eprintln!("invalid path.");
+                return;
+            };
+
+            if menu::get_yn_input(confirmation) {
+                obj.targets.remove(&keyword);
+                if is_replacement_dir {
+                    obj.targets.insert(keyword, replacement);
+                } else {
+                    obj.targets.insert(replacement, target_path.to_string());
+                }
+                println!("rule updated.");
+            } else {
+                process::exit(1);
             }
         }
+        println!("rule updated.")
     }
 }

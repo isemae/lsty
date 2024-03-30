@@ -14,10 +14,10 @@ impl DataManager {
         keyword: String,
     ) -> io::Result<()> {
         if let Some(existing_target) = data.targets.get(&keyword) {
-            if existing_target == &target_path {
+            if existing_target == &target_path || data.targets.contains_key(&keyword) {
                 println!("rule already exists.");
                 println!(
-                    "Note: try \"lsty edit {}\" or \"lsty edit \x1b[4m{}\x1b[0m\x1b[0m\" to edit the keyword or path.",
+                    "Note: Try \"\x1b[4mlsty edit {0} {1}\x1b[0m\x1b[0m\" or \"\x1b[4mlsty -e {0} {1}\x1b[0m\x1b[0m\" to edit the path.",
                     keyword, target_path
                 );
                 process::exit(1)
@@ -26,8 +26,6 @@ impl DataManager {
             data.targets.insert(keyword, target_path.clone());
             println!("rule added.");
         }
-        // } else {
-
         Ok(())
     }
 
