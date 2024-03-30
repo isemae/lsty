@@ -5,10 +5,10 @@
 ### No More Messy Download Folder!
 
 
-Organize your directory and simplify your file management.
 
-"lusty" manages folders with source-keyword-target triplets. Each source path corresponds to a shell path when its keyword-target pair is added.
-Your current shell path will always be one of the source paths, so you don't have to bother inputting paths. 
+
+"lusty" simplifies file management by source-keyword-target triplets. The source path is a shell path when its keyword-target rule is added.
+Because your current shell path will always be one of the source paths, means you don't have to bother inputting source, target paths every time. 
 
 Just command, keyword, one target path(if you need).
 
@@ -18,39 +18,61 @@ Just command, keyword, one target path(if you need).
 
 
 ```shell
-# Adds a new keyword-target directory pair.
-lsty add(-a) keyword /target_dir
+# Adds a new keyword-target rule.
+lsty add(-a) KEYWORD TARGET_PATH
 
 # You can use any words for keywords, and file extensions too, such as .hwp, .alz, .egg...
 ```
 
 ```shell
-# Removes the pair associated with the specified keyword.
-lety del(-d) <keyword>
+# Removes the rule associated with the specified KEYWORD.
+# Shows available keywords if the input KEYWORD is not found.
+lsty del(-d) KEYWORD
+```
+
+```shell
+# Updates a rule that has KEYWORD as its key.
+lsty edit(-e) KEYWORD KEYWORD_OR_PATH
 ```
 
 ```shell
 # Moves all entries with <keyword> in their names.
-lsty move(-m) <keyword>
-# Moves all entries from a source path to each respective target path.
+lsty move(-m) <KEYWORD>
+# Moves all entries from a source path to each respective target path without <KEYWORD> input.
      move(-m)
-# Or you can just move all the entries that is in the data.
-     move -A
 ```
 
+```shell
+# Scans current path and shows entries that satisfy any rules of the current path, or for a specified rule by <KEYWORD>.
+# You can move entries to their target pathes by giving additional input 'm'.
+# 'q' or 'ESC' to cancel.
+lsty scan(-s) <KEYWORD>
+```
+
+```shell
+# Sets <keyword> as an alias for current path.
+# The alias can be used for specifying the source path to import rules from. 
+lsty alias(-al) KEYWORD
+```
+
+```shell
+# Imports rules from another path to the current path.
+# You can specify the path to import from by <ALIAS> or <SOURCE_PATH>.
+lsty import(-i) ALIAS_OR_PATH
+```
 
 ## Installation
 
 macOS
 
 ```shell
-
+# Homebrew
 ```
 
 Windows
 
 ```shell
-
+# Chocolatey
 ```
 
 <details markdown="1">
