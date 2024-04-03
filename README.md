@@ -83,6 +83,10 @@ Windows
 but datz no COOL
 
 
+<img width="800" alt="took_2_yrs_20240331023409" src="https://github.com/isemae/lsty/assets/55517023/0c3469c3-6af7-48c4-a079-ab1dab45b784">
+
+and not forgetting a goal is COOL
+
 ## GUI?
 <img src="https://github.com/isemae/lusty.rs/assets/55517023/a9d92a2d-8e9e-49cd-9921-03baa85ef800" alt="fl_or_tr" width="500">
 
