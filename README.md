@@ -1,13 +1,12 @@
-# lusty.rs
-<img src="https://github.com/isemae/lusty.rs/assets/55517023/63dd2cb2-4974-405b-a2fc-e1cc8ed284f9" height="200">
+# lsty.rs
+<img src="https://github.com/isemae/lsty/assets/55517023/c53f2594-c293-4646-99d3-4ab3bef91085" height="200">
 
 
 ### No More Messy Download Folder!
 
 
 
-
-"lusty" simplifies file management by source-keyword-target triplets. The source path is a shell path when its keyword-target rule is added.
+"lsty" simplifies file management by source-keyword-target triplets. The source path is a shell path when its keyword-target rule is added.
 Because your current shell path will always be one of the source paths, means you don't have to bother inputting source, target paths every time. 
 
 Just command, keyword, one target path(if you need).
