@@ -2,10 +2,10 @@
 <img src="https://github.com/isemae/lsty/assets/55517023/c53f2594-c293-4646-99d3-4ab3bef91085" height="200">
 
 
-### No More Messy Download Folder!
+### No more messy download folder!
 
 
-user-rule-based file manager.
+User-rule-based file manager.
 
 
 See Commands below for more info!
