@@ -5,12 +5,10 @@
 ### No More Messy Download Folder!
 
 
+user-rule-based file manager.
 
-"lsty" simplifies file management by source-keyword-target triplets. The source path is a shell path when its keyword-target rule is added.
-Because your current shell path will always be one of the source paths, means you don't have to bother inputting source, target paths every time. 
 
-Just command, keyword, one target path(if you need).
-
+See Commands below for more info!
 
 
 ## Commands
@@ -18,6 +16,7 @@ Just command, keyword, one target path(if you need).
 
 ```shell
 # Adds a new keyword-target rule.
+# Your working directory on shell will be the source path.
 lsty add(-a) KEYWORD TARGET_PATH
 
 # You can use any words for keywords, and file extensions too, such as .hwp, .alz, .egg...
@@ -61,32 +60,4 @@ lsty import(-i) ALIAS_OR_PATH
 ```
 
 ## Installation
-
-macOS
-
-```shell
-# Homebrew
-```
-
-Windows
-
-```shell
-# Chocolatey
-```
-
-<details markdown="1">
-<summary>etc</summary> 
-
-
-## 'nah why dont ya just make batch files'?
-but datz no COOL
-
-
-<img width="800" alt="took_2_yrs_20240331023409" src="https://github.com/isemae/lsty/assets/55517023/0c3469c3-6af7-48c4-a079-ab1dab45b784">
-
-and not forgetting a goal is COOL
-
-## GUI?
-<img src="https://github.com/isemae/lusty.rs/assets/55517023/a9d92a2d-8e9e-49cd-9921-03baa85ef800" alt="fl_or_tr" width="500">
-
-</details>
+Download binary from releases and move it to your user binary or system binary path.
