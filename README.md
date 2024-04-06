@@ -23,7 +23,7 @@ lsty add(-a) KEYWORD TARGET_PATH
 ```
 
 ```shell
-# Removes the rule associated with the specified KEYWORD.
+# Removes a rule associated with a specified KEYWORD.
 # Shows available keywords if the input KEYWORD is not found.
 lsty del(-d) KEYWORD
 ```
