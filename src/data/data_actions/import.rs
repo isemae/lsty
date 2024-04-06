@@ -1,5 +1,8 @@
 use crate::{
-    cli::menu,
+    cli::{
+        menu,
+        messages::{message_format, MessageArgs, MessageKind},
+    },
     data::{
         data_manager::DataManager,
         model::{DataModel, DataObject},
@@ -19,11 +22,24 @@ impl DataManager {
             .expect("valid Unicode path succeeded");
 
         let error_message = match (alias.is_empty(), alias.contains('/'), alias.contains('\\')) {
-            (true, _, _) => "NOT FOUND: no rule for the path found.",
-            (false, true, _) | (false, _, true) => {
-                "invalid alias: alias should not contain '/' or '\\'."
-            }
-            (false, false, false) => "NOT FOUND: no rule for the alias found.",
+            (true, _, _) => message_format(
+                MessageKind::NotFoundRuleForPath,
+                MessageArgs {
+                    ..Default::default()
+                },
+            ),
+            (false, true, _) | (false, _, true) => message_format(
+                MessageKind::InvalidAlias,
+                MessageArgs {
+                    ..Default::default()
+                },
+            ),
+            (false, false, false) => message_format(
+                MessageKind::NotFoundAlias,
+                MessageArgs {
+                    ..Default::default()
+                },
+            ),
         };
 
         if let Some(data_map) = data
@@ -53,7 +69,13 @@ impl DataManager {
                 println!("  keyword: {}, target path: \x1b[4m{}\x1b[0m\x1b[0m", k, v);
             }
             println!();
-            match menu::get_yn_input(format!("from \x1b[4m{}\x1b[0m\x1b[0m?", import_path)) {
+            match menu::get_yn_input(message_format(
+                MessageKind::FromPath,
+                MessageArgs {
+                    primary_path: import_path,
+                    ..Default::default()
+                },
+            )) {
                 true => {
                     current_obj.targets.extend(targets);
                     self.save_json_data(data)?;

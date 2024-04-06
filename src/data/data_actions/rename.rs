@@ -30,7 +30,7 @@ impl DataManager {
             if !PathBuf::from(map.1).exists() {
                 eprintln!(
                             " {} \x1b[0;33mtarget path '{}' doesn't exist. Creating the directory...\x1b[0m",
-                            status_symbol(&Caution),map.1
+                            status_symbol(&Caution), map.1
                         );
                 fs::create_dir_all(map.1)
                     .expect("Error: failed to create target directory on disk.");
@@ -68,7 +68,7 @@ impl DataManager {
                         }
                         false => {
                             self.validate_pair(&data.targets).unwrap();
-                            self.move_entry(entry.clone(), new_entry);
+                            self.move_entry(&entry, new_entry);
                             println!("  {0} {1} {2}", status_symbol(&Safe), entry_symbol, entry);
                             moved_count += 1;
                         }
@@ -88,7 +88,7 @@ impl DataManager {
         Ok(())
     }
 
-    fn move_entry(&self, entry_path: String, new_entry: String) {
+    pub fn move_entry(&self, entry_path: &String, new_entry: String) {
         match PathBuf::from(entry_path.clone()).is_dir() {
             true => {
                 fs::create_dir_all(&new_entry).expect("");

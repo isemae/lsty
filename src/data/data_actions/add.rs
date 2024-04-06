@@ -1,8 +1,11 @@
 use camino::Utf8PathBuf;
 
-use crate::data::{
-    data_manager::DataManager,
-    model::{DataModel, DataObject},
+use crate::{
+    cli::messages::{message_format, MessageArgs, MessageKind},
+    data::{
+        data_manager::DataManager,
+        model::{DataModel, DataObject},
+    },
 };
 use std::{io, process};
 
@@ -15,10 +18,16 @@ impl DataManager {
     ) -> io::Result<()> {
         if let Some(existing_target) = data.targets.get(&keyword) {
             if existing_target == &target_path || data.targets.contains_key(&keyword) {
-                println!("rule already exists.");
                 println!(
-                    "Note: Try \"\x1b[4mlsty edit {0} {1}\x1b[0m\x1b[0m\" or \"\x1b[4mlsty -e {0} {1}\x1b[0m\x1b[0m\" to edit the path.",
-                    keyword, target_path
+                    "{}",
+                    message_format(
+                        MessageKind::AlreadyExistsTryEdit,
+                        MessageArgs {
+                            primary_keyword: keyword,
+                            primary_path: target_path,
+                            ..Default::default()
+                        }
+                    )
                 );
                 process::exit(1)
             }

@@ -1,14 +1,13 @@
 use crate::{
     cli::{
         menu,
+        messages::{message_format, MessageArgs, MessageKind},
         status_symbols::{status_symbol, Status::*},
     },
     commands::arguments::{Commands, SubArgs},
     data::model::DataModel,
 };
-
 use camino::Utf8PathBuf;
-
 use serde::ser::Error;
 use std::{
     env,
@@ -61,7 +60,18 @@ impl DataManager {
                         );
                     }
                     Ok(obj) => {
-                        self.print_rule_info(args);
+                        println!(
+                            "{}",
+                            message_format(
+                                MessageKind::RuleInfo,
+                                MessageArgs {
+                                    primary_keyword: args.keyword.clone(),
+                                    primary_path: args.primary_path.clone(),
+                                    secondary_path: args.secondary_path.clone(),
+                                    ..Default::default()
+                                },
+                            )
+                        );
                         self.add_rule_to_json(
                             obj,
                             args.secondary_path.to_string(),
@@ -76,9 +86,27 @@ impl DataManager {
                     eprintln!("{}", e)
                 }
                 Ok(obj) => {
-                    self.remove_rule_from_json(obj, args.keyword.as_str())?;
-                    println!("deleted rule successfully.");
-                    self.save_json_data(&data)?;
+                    if obj.targets.get(&args.keyword).is_some() {
+                        self.remove_rule_from_json(obj, args.keyword.as_str())?;
+                        println!("deleted rule successfully.");
+                        self.save_json_data(&data)?;
+                    } else {
+                        return Err(io::Error::new(
+                            io::ErrorKind::NotFound,
+                            message_format(
+                                MessageKind::NoRuleShowAvailable,
+                                MessageArgs {
+                                    primary_keyword: obj
+                                        .targets
+                                        .keys()
+                                        .cloned()
+                                        .collect::<Vec<_>>()
+                                        .join("\n"),
+                                    ..Default::default()
+                                },
+                            ),
+                        ));
+                    }
                 }
             },
             DataAction::Scan => match data.object_by_source_mut(current_dir) {
@@ -126,26 +154,44 @@ impl DataManager {
                     eprintln!("Error: {}", e)
                 }
             }
-            DataAction::Edit => {
-                match data.object_by_source_mut(current_dir) {
-                    Err(_) => {
-                        eprintln!("no such rule for the keyword");
-                    }
-                    Ok(obj) => {
-                        self.edit_rule(obj, args.keyword.clone(), args.secondary_path.clone())
+            DataAction::Edit => match data.object_by_source_mut(current_dir) {
+                Err(_) => {
+                    eprintln!("no such rule for the keyword");
+                }
+                Ok(obj) => {
+                    if obj.targets.get(&args.keyword).is_some() {
+                        self.edit_rule(obj, args.keyword.clone(), args.secondary_path.clone());
+                        self.save_json_data(&data).expect("");
+                    } else {
+                        return Err(io::Error::new(
+                            io::ErrorKind::NotFound,
+                            message_format(
+                                MessageKind::NoRuleShowAvailable,
+                                MessageArgs {
+                                    primary_keyword: obj
+                                        .targets
+                                        .keys()
+                                        .cloned()
+                                        .collect::<Vec<_>>()
+                                        .join("\n"),
+                                    ..Default::default()
+                                },
+                            ),
+                        ));
                     }
                 }
-                self.save_json_data(&data).expect("");
-            }
+            },
             DataAction::Alias => {
                 if let Some(o) = data.data.iter().find(|o| o.alias == args.keyword) {
                     return Err(io::Error::new(
                         io::ErrorKind::AlreadyExists,
-                        format!(
-                            "{} '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
-                            status_symbol(&Error),
-                            args.keyword,
-                            o.source
+                        message_format(
+                            MessageKind::ExistingAlias,
+                            MessageArgs {
+                                primary_keyword: args.keyword.clone(),
+                                primary_path: o.source.clone(),
+                                ..Default::default()
+                            },
                         ),
                     ));
                 } else if let Ok(obj) = data.object_by_source_mut(current_dir) {
@@ -154,7 +200,17 @@ impl DataManager {
                             eprintln!("{}", e)
                         }
                         Ok(_) => {
-                            println!("updated alias: {} -> {}", obj.alias, args.keyword);
+                            println!(
+                                "{}",
+                                message_format(
+                                    MessageKind::UpdatedAlias,
+                                    MessageArgs {
+                                        primary_keyword: obj.alias.clone(),
+                                        secondary_keyword: args.keyword.clone(),
+                                        ..Default::default()
+                                    }
+                                )
+                            );
                             self.save_json_data(&data)?
                         }
                     }
@@ -191,19 +247,5 @@ impl DataManager {
         let mut file = File::create(exe_dir.join("lsty.json"))?;
         serde_json::to_writer_pretty(&mut file, data)?;
         Ok(())
-    }
-
-    fn print_rule_info(&self, args: &SubArgs) {
-        let mut source_path = Utf8PathBuf::new();
-        let mut target_path = Utf8PathBuf::new();
-
-        source_path.push(args.primary_path.clone());
-        target_path.push(args.secondary_path.clone());
-
-        let keyword = &args.keyword;
-
-        println!(" KEYWORD: {}", keyword);
-        println!(" SOURCE : \x1b[4m{}\x1b[0m", source_path);
-        println!(" TARGET : └─> \x1b[4m{}\x1b[0m \n", target_path);
     }
 }
