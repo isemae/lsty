@@ -1,4 +1,5 @@
 use super::status_symbols::{status_symbol, Status::*};
+use camino::Utf8PathBuf;
 use crossterm::style::Stylize;
 
 pub struct MessageArgs {
@@ -56,7 +57,7 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
             )
         }
         MessageKind::NoKeywordOrPathForReplace => {
-            format!("please add a new keyword or path for a replace.\nCURRENT:\n keyword - {},\n target - {}", args.primary_keyword, args.primary_path)
+            format!("please add a new keyword or path for a replace.\nCURRENT:\n keyword - {},\n target - {}", args.primary_keyword, Utf8PathBuf::from(args.primary_path))
         }
         MessageKind::FromPath => {
             format!("from \x1b[4m{}\x1b[0m\x1b[0m?", args.primary_path)

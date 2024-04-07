@@ -52,13 +52,16 @@ impl DataManager {
                     process::exit(1);
                 }
             } else {
-                message_format(
-                    MessageKind::NoKeywordOrPathForReplace,
-                    MessageArgs {
-                        primary_keyword: keyword.clone(),
-                        secondary_keyword: target_path.clone(),
-                        ..Default::default()
-                    },
+                println!(
+                    "{}",
+                    message_format(
+                        MessageKind::NoKeywordOrPathForReplace,
+                        MessageArgs {
+                            primary_keyword: keyword.to_string(),
+                            primary_path: target_path.to_string(),
+                            ..Default::default()
+                        },
+                    )
                 );
                 process::exit(1);
             }
