@@ -1,7 +1,7 @@
 use crate::{
     cli::{
+        cli_format::{message_format, MessageArgs, MessageKind},
         menu,
-        messages::{message_format, MessageArgs, MessageKind},
         status_symbols::{status_symbol, Status::*},
     },
     commands::arguments::{Commands, SubArgs},

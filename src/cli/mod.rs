@@ -1,3 +1,3 @@
+pub mod cli_format;
 pub mod menu;
-pub mod messages;
 pub mod status_symbols;

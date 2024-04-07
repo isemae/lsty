@@ -1,8 +1,5 @@
 use crate::{
-    cli::{
-        menu,
-        messages::{message_format, MessageArgs, MessageKind},
-    },
+    cli::{cli_format::*, menu},
     data::{data_manager::DataManager, model::DataObject},
 };
 use std::io;
@@ -12,16 +9,11 @@ impl DataManager {
         if alias.contains('/') || alias.contains('\\') {
             Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                message_format(
-                    MessageKind::InvalidAlias,
-                    MessageArgs {
-                        ..Default::default()
-                    },
-                ),
+                error_format(ErrorKind::InvalidAlias),
             ))
         } else {
             if menu::get_yn_input(message_format(
-                crate::cli::messages::MessageKind::UpdatingAlias,
+                MessageKind::UpdatingAlias,
                 MessageArgs {
                     primary_keyword: data.alias.clone(),
                     secondary_keyword: alias.clone(),

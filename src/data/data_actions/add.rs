@@ -1,7 +1,7 @@
 use camino::Utf8PathBuf;
 
 use crate::{
-    cli::messages::{message_format, MessageArgs, MessageKind},
+    cli::cli_format::{message_format, MessageArgs, MessageKind},
     data::{
         data_manager::DataManager,
         model::{DataModel, DataObject},

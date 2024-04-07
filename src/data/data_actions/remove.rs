@@ -1,7 +1,7 @@
 use crate::{
     cli::{
+        cli_format::{message_format, MessageArgs, MessageKind},
         menu,
-        messages::{message_format, MessageArgs, MessageKind},
     },
     data::{data_manager::DataManager, model::DataObject},
 };

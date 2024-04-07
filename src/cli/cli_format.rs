@@ -25,16 +25,19 @@ pub enum MessageKind {
     TargetChangeKeyword,
     NoKeywordOrPathForReplace,
     FromPath,
-    NotFoundAlias,
-    InvalidAlias,
     ExistingAlias,
     UpdatingAlias,
     UpdatedAlias,
-    NotFoundRuleForPath,
     DeleteRule,
     NoRuleShowAvailable,
     RuleInfo,
     AlreadyExistsTryEdit,
+}
+
+pub enum ErrorKind {
+    InvalidAlias,
+    NotFoundAlias,
+    NotFoundRuleForPath,
 }
 
 pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
@@ -58,16 +61,14 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
         MessageKind::FromPath => {
             format!("from \x1b[4m{}\x1b[0m\x1b[0m?", args.primary_path)
         }
-        MessageKind::NotFoundAlias => {
-            format!("NOT FOUND: no rule for the alias found.")
-        }
-        MessageKind::InvalidAlias => {
+        MessageKind::ExistingAlias => {
             format!(
-                "{0} invalid alias: alias should not contain '/' or '\\'.",
-                status_symbol(&Error)
+                "{} '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
+                status_symbol(&Error),
+                args.primary_keyword,
+                args.primary_path
             )
         }
-        MessageKind::NotFoundRuleForPath => format!("NOT FOUND: no rule for the path found."),
         MessageKind::DeleteRule => {
             format!(
                 "{0} delete rule for keyword '{1}', target path '\x1b[4m{2}\x1b[0m\x1b[0m'?",
@@ -81,14 +82,6 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
                 "{} no such rule for the keyword in the current path. \nkeywords available for current path:\n{}",
                 status_symbol(&NotFound),
                     args.primary_keyword.cyan(),
-            )
-        }
-        MessageKind::ExistingAlias => {
-            format!(
-                "{} '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
-                status_symbol(&Error),
-                args.primary_keyword,
-                args.primary_path
             )
         }
 
@@ -118,5 +111,20 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
         MessageKind::AlreadyExistsTryEdit => {
             format!("rule already exists.\nNote: Try \"\x1b[4mlsty edit {0} {1}\x1b[0m\x1b[0m\" or \"\x1b[4mlsty -e {0} {1}\x1b[0m\x1b[0m\" to edit the path.", args.primary_keyword, args.primary_path)
         }
+    }
+}
+
+pub fn error_format(kind: ErrorKind) -> String {
+    match kind {
+        ErrorKind::InvalidAlias => {
+            format!(
+                "{0} invalid alias: alias should not contain '/' or '\\'.",
+                status_symbol(&Error)
+            )
+        }
+        ErrorKind::NotFoundAlias => {
+            format!("NOT FOUND: no rule for the alias found.")
+        }
+        ErrorKind::NotFoundRuleForPath => format!("NOT FOUND: no rule for the path found."),
     }
 }

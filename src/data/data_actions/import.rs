@@ -1,8 +1,5 @@
 use crate::{
-    cli::{
-        menu,
-        messages::{message_format, MessageArgs, MessageKind},
-    },
+    cli::{cli_format::*, menu},
     data::{
         data_manager::DataManager,
         model::{DataModel, DataObject},
@@ -22,24 +19,9 @@ impl DataManager {
             .expect("valid Unicode path succeeded");
 
         let error_message = match (alias.is_empty(), alias.contains('/'), alias.contains('\\')) {
-            (true, _, _) => message_format(
-                MessageKind::NotFoundRuleForPath,
-                MessageArgs {
-                    ..Default::default()
-                },
-            ),
-            (false, true, _) | (false, _, true) => message_format(
-                MessageKind::InvalidAlias,
-                MessageArgs {
-                    ..Default::default()
-                },
-            ),
-            (false, false, false) => message_format(
-                MessageKind::NotFoundAlias,
-                MessageArgs {
-                    ..Default::default()
-                },
-            ),
+            (true, _, _) => error_format(ErrorKind::NotFoundRuleForPath),
+            (false, true, _) | (false, _, true) => error_format(ErrorKind::InvalidAlias),
+            (false, false, false) => error_format(ErrorKind::NotFoundAlias),
         };
 
         if let Some(data_map) = data
