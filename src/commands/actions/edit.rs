@@ -57,8 +57,8 @@ impl DataManager {
                     message_format(
                         MessageKind::NoKeywordOrPathForReplace,
                         MessageArgs {
-                            primary_keyword: keyword.to_string(),
-                            primary_path: target_path.to_string(),
+                            primary_keyword: keyword,
+                            primary_path: target_path.clone(),
                             ..Default::default()
                         },
                     )
