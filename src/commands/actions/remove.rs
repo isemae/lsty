@@ -1,6 +1,6 @@
 use crate::{
     cli::{
-        cli_format::{message_format, MessageArgs, MessageKind},
+        cli_format::{msg_format, MsgArgs, MsgKind::*},
         menu,
     },
     data::{data_manager::DataManager, model::DataObject},
@@ -14,14 +14,11 @@ impl DataManager {
         keyword: &str,
     ) -> Result<(), io::Error> {
         if let Some(target_path) = data.targets.get(keyword) {
-            if menu::get_yn_input(message_format(
-                MessageKind::DeleteRule,
-                MessageArgs {
-                    primary_keyword: keyword.to_string(),
-                    primary_path: target_path.to_string(),
-                    ..Default::default()
-                },
-            )) {
+            if menu::get_yn_input(msg_format(DeleteRule(MsgArgs {
+                primary_keyword: keyword.to_string(),
+                primary_path: target_path.to_string(),
+                ..Default::default()
+            }))) {
                 data.targets.remove(keyword);
             } else {
                 process::exit(1)

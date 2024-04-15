@@ -1,5 +1,8 @@
 use crate::{
-    cli::{cli_format::*, menu},
+    cli::{
+        cli_format::{error_format, msg_format, ErrorKind, MsgArgs, MsgKind::*},
+        menu,
+    },
     data::{
         data_manager::DataManager,
         model::{DataModel, DataObject},
@@ -51,13 +54,10 @@ impl DataManager {
                 println!("  keyword: {}, target path: \x1b[4m{}\x1b[0m\x1b[0m", k, v);
             }
             println!();
-            match menu::get_yn_input(message_format(
-                MessageKind::FromPath,
-                MessageArgs {
-                    primary_path: import_path,
-                    ..Default::default()
-                },
-            )) {
+            match menu::get_yn_input(msg_format(FromPath(MsgArgs {
+                primary_path: import_path,
+                ..Default::default()
+            }))) {
                 true => {
                     current_obj.targets.extend(targets);
                     self.save_json_data(data)?;

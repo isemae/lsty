@@ -12,14 +12,11 @@ impl DataManager {
                 error_format(ErrorKind::InvalidAlias),
             ))
         } else {
-            if menu::get_yn_input(message_format(
-                MessageKind::UpdatingAlias,
-                MessageArgs {
-                    primary_keyword: data.alias.clone(),
-                    secondary_keyword: alias.clone(),
-                    ..Default::default()
-                },
-            )) {
+            if menu::get_yn_input(msg_format(MsgKind::UpdatingAlias(MsgArgs {
+                primary_keyword: data.alias.clone(),
+                secondary_keyword: alias.clone(),
+                ..Default::default()
+            }))) {
                 data.alias = alias;
             }
             Ok(())

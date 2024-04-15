@@ -1,6 +1,6 @@
 use crate::{
     cli::{
-        cli_format::{message_format, MessageArgs, MessageKind},
+        cli_format::{msg_format, MsgArgs, MsgKind},
         menu,
         status_symbols::{status_symbol, Status::*},
     },
@@ -62,15 +62,12 @@ impl DataManager {
                     Ok(obj) => {
                         println!(
                             "{}",
-                            message_format(
-                                MessageKind::RuleInfo,
-                                MessageArgs {
-                                    primary_keyword: args.keyword.clone(),
-                                    primary_path: args.primary_path.clone(),
-                                    secondary_path: args.secondary_path.clone(),
-                                    ..Default::default()
-                                },
-                            )
+                            msg_format(MsgKind::RuleInfo(MsgArgs {
+                                primary_keyword: args.keyword.clone(),
+                                primary_path: args.primary_path.clone(),
+                                secondary_path: args.secondary_path.clone(),
+                                ..Default::default()
+                            },),)
                         );
                         self.add_rule_to_json(
                             obj,
@@ -93,18 +90,15 @@ impl DataManager {
                     } else {
                         return Err(io::Error::new(
                             io::ErrorKind::NotFound,
-                            message_format(
-                                MessageKind::NoRuleShowAvailable,
-                                MessageArgs {
-                                    primary_keyword: obj
-                                        .targets
-                                        .keys()
-                                        .cloned()
-                                        .collect::<Vec<_>>()
-                                        .join("\n"),
-                                    ..Default::default()
-                                },
-                            ),
+                            msg_format(MsgKind::NoRuleShowAvailable(MsgArgs {
+                                primary_keyword: obj
+                                    .targets
+                                    .keys()
+                                    .cloned()
+                                    .collect::<Vec<_>>()
+                                    .join("\n"),
+                                ..Default::default()
+                            })),
                         ));
                     }
                 }
@@ -165,18 +159,15 @@ impl DataManager {
                     } else {
                         return Err(io::Error::new(
                             io::ErrorKind::NotFound,
-                            message_format(
-                                MessageKind::NoRuleShowAvailable,
-                                MessageArgs {
-                                    primary_keyword: obj
-                                        .targets
-                                        .keys()
-                                        .cloned()
-                                        .collect::<Vec<_>>()
-                                        .join("\n"),
-                                    ..Default::default()
-                                },
-                            ),
+                            msg_format(MsgKind::NoRuleShowAvailable(MsgArgs {
+                                primary_keyword: obj
+                                    .targets
+                                    .keys()
+                                    .cloned()
+                                    .collect::<Vec<_>>()
+                                    .join("\n"),
+                                ..Default::default()
+                            })),
                         ));
                     }
                 }
@@ -185,14 +176,11 @@ impl DataManager {
                 if let Some(o) = data.data.iter().find(|o| o.alias == args.keyword) {
                     return Err(io::Error::new(
                         io::ErrorKind::AlreadyExists,
-                        message_format(
-                            MessageKind::ExistingAlias,
-                            MessageArgs {
-                                primary_keyword: args.keyword.clone(),
-                                primary_path: o.source.clone(),
-                                ..Default::default()
-                            },
-                        ),
+                        msg_format(MsgKind::ExistingAlias(MsgArgs {
+                            primary_keyword: args.keyword.clone(),
+                            primary_path: o.source.clone(),
+                            ..Default::default()
+                        })),
                     ));
                 } else if let Ok(obj) = data.object_by_source_mut(current_dir) {
                     match self.set_alias(obj, args.keyword.clone()) {
@@ -202,14 +190,11 @@ impl DataManager {
                         Ok(_) => {
                             println!(
                                 "{}",
-                                message_format(
-                                    MessageKind::UpdatedAlias,
-                                    MessageArgs {
-                                        primary_keyword: obj.alias.clone(),
-                                        secondary_keyword: args.keyword.clone(),
-                                        ..Default::default()
-                                    }
-                                )
+                                msg_format(MsgKind::UpdatedAlias(MsgArgs {
+                                    primary_keyword: obj.alias.clone(),
+                                    secondary_keyword: args.keyword.clone(),
+                                    ..Default::default()
+                                }),)
                             );
                             self.save_json_data(&data)?
                         }

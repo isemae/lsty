@@ -2,16 +2,16 @@ use super::status_symbols::{status_symbol, Status::*};
 use camino::Utf8PathBuf;
 use crossterm::style::Stylize;
 
-pub struct MessageArgs {
+pub struct MsgArgs {
     pub primary_keyword: String,
     pub secondary_keyword: String,
     pub primary_path: String,
     pub secondary_path: String,
 }
 
-impl Default for MessageArgs {
+impl Default for MsgArgs {
     fn default() -> Self {
-        MessageArgs {
+        MsgArgs {
             primary_keyword: String::new(),
             secondary_keyword: String::new(),
             primary_path: String::new(),
@@ -21,18 +21,18 @@ impl Default for MessageArgs {
 }
 
 // category - action - condition
-pub enum MessageKind {
-    TargetChangePath,
-    TargetChangeKeyword,
-    NoKeywordOrPathForReplace,
-    FromPath,
-    ExistingAlias,
-    UpdatingAlias,
-    UpdatedAlias,
-    DeleteRule,
-    NoRuleShowAvailable,
-    RuleInfo,
-    AlreadyExistsTryEdit,
+pub enum MsgKind {
+    TargetChangePath(MsgArgs),
+    TargetChangeKeyword(MsgArgs),
+    NoKeywordOrPathForReplace(MsgArgs),
+    FromPath(MsgArgs),
+    ExistingAlias(MsgArgs),
+    UpdatingAlias(MsgArgs),
+    UpdatedAlias(MsgArgs),
+    DeleteRule(MsgArgs),
+    NoRuleShowAvailable(MsgArgs),
+    RuleInfo(MsgArgs),
+    AlreadyExistsTryEdit(MsgArgs),
 }
 
 pub enum ErrorKind {
@@ -41,14 +41,14 @@ pub enum ErrorKind {
     NotFoundRuleForPath,
 }
 
-pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
+pub fn msg_format(kind: MsgKind) -> String {
     match kind {
-        MessageKind::TargetChangePath => {
+        MsgKind::TargetChangePath(args) => {
             format!(
         "{0} change target path '\x1b[4m{1}\x1b[0m\x1b[0m' -> '\x1b[4m{2}\x1b[0m\x1b[0m' for keyword '{3}'?",
         status_symbol(&YN), args.primary_path, args.secondary_path, args.primary_keyword)
         }
-        MessageKind::TargetChangeKeyword => {
+        MsgKind::TargetChangeKeyword(args) => {
             format!(
                 "{0} change keyword '{1}' -> '{2}'?",
                 status_symbol(&YN),
@@ -56,13 +56,13 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
                 args.secondary_keyword
             )
         }
-        MessageKind::NoKeywordOrPathForReplace => {
+        MsgKind::NoKeywordOrPathForReplace(args) => {
             format!("please add a new keyword or path for a replace.\nCURRENT:\n keyword - {},\n target - {}", args.primary_keyword, Utf8PathBuf::from(args.primary_path))
         }
-        MessageKind::FromPath => {
+        MsgKind::FromPath(args) => {
             format!("from \x1b[4m{}\x1b[0m\x1b[0m?", args.primary_path)
         }
-        MessageKind::ExistingAlias => {
+        MsgKind::ExistingAlias(args) => {
             format!(
                 "{} '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
                 status_symbol(&Error),
@@ -70,7 +70,7 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
                 args.primary_path
             )
         }
-        MessageKind::DeleteRule => {
+        MsgKind::DeleteRule(args) => {
             format!(
                 "{0} delete rule for keyword '{1}', target path '\x1b[4m{2}\x1b[0m\x1b[0m'?",
                 status_symbol(&YN),
@@ -78,7 +78,7 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
                 args.primary_path
             )
         }
-        MessageKind::NoRuleShowAvailable => {
+        MsgKind::NoRuleShowAvailable(args) => {
             format!(
                 "{} no such rule for the keyword in the current path. \nkeywords available for current path:\n{}",
                 status_symbol(&NotFound),
@@ -86,14 +86,14 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
             )
         }
 
-        MessageKind::RuleInfo => {
+        MsgKind::RuleInfo(args) => {
             format!(
                 "KEYWORD: {}\n SOURCE : \x1b[4m{}\x1b[0m\n TARGET : └─> \x1b[4m{}\x1b[0m \n",
                 args.primary_keyword, args.primary_path, args.secondary_path
             )
         }
 
-        MessageKind::UpdatingAlias => {
+        MsgKind::UpdatingAlias(args) => {
             format!(
                 "{} update alias '{}' -> '{}'?",
                 status_symbol(&YN),
@@ -101,7 +101,7 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
                 args.secondary_keyword
             )
         }
-        MessageKind::UpdatedAlias => {
+        MsgKind::UpdatedAlias(args) => {
             format!(
                 "{} updated alias: {} -> {}",
                 status_symbol(&Safe),
@@ -109,7 +109,7 @@ pub fn message_format(kind: MessageKind, args: MessageArgs) -> String {
                 args.secondary_keyword
             )
         }
-        MessageKind::AlreadyExistsTryEdit => {
+        MsgKind::AlreadyExistsTryEdit(args) => {
             format!("rule already exists.\nNote: Try \"\x1b[4mlsty edit {0} {1}\x1b[0m\x1b[0m\" or \"\x1b[4mlsty -e {0} {1}\x1b[0m\x1b[0m\" to edit the path.", args.primary_keyword, args.primary_path)
         }
     }

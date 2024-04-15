@@ -1,6 +1,6 @@
 use crate::{
     cli::{
-        cli_format::{message_format, MessageArgs, MessageKind},
+        cli_format::{msg_format, MsgArgs, MsgKind},
         menu,
     },
     data::{data_manager::DataManager, model::DataObject},
@@ -15,27 +15,21 @@ impl DataManager {
             if !replacement.is_empty() {
                 let is_replacement_dir = Utf8PathBuf::from(&replacement).is_dir();
                 let confirmation = if is_replacement_dir {
-                    message_format(
-                        MessageKind::TargetChangePath,
-                        MessageArgs {
-                            primary_keyword: keyword.clone(),
-                            primary_path: target_path.to_string(),
-                            secondary_path: replacement.clone(),
-                            ..Default::default()
-                        },
-                    )
+                    msg_format(MsgKind::TargetChangePath(MsgArgs {
+                        primary_keyword: keyword.clone(),
+                        primary_path: target_path.to_string(),
+                        secondary_path: replacement.clone(),
+                        ..Default::default()
+                    }))
                 } else if !replacement.contains('\\')
                     && !replacement.contains('/')
                     && !replacement.contains('~')
                 {
-                    message_format(
-                        MessageKind::TargetChangeKeyword,
-                        MessageArgs {
-                            primary_keyword: keyword.clone(),
-                            secondary_keyword: replacement.clone(),
-                            ..Default::default()
-                        },
-                    )
+                    msg_format(MsgKind::TargetChangeKeyword(MsgArgs {
+                        primary_keyword: keyword.clone(),
+                        secondary_keyword: replacement.clone(),
+                        ..Default::default()
+                    }))
                 } else {
                     eprintln!("invalid path.");
                     return;
@@ -54,14 +48,11 @@ impl DataManager {
             } else {
                 println!(
                     "{}",
-                    message_format(
-                        MessageKind::NoKeywordOrPathForReplace,
-                        MessageArgs {
-                            primary_keyword: keyword,
-                            primary_path: target_path.clone(),
-                            ..Default::default()
-                        },
-                    )
+                    msg_format(MsgKind::NoKeywordOrPathForReplace(MsgArgs {
+                        primary_keyword: keyword,
+                        primary_path: target_path.clone(),
+                        ..Default::default()
+                    }))
                 );
                 process::exit(1);
             }
