@@ -26,9 +26,9 @@ pub fn check_input(d: &DataObject, p: String, k: String) -> InputCase {
             }) {
                 case = InputCase::DupQuotes;
             } else {
-                case = InputCase::InputInvalid;
+                case = InputCase::Normal;
             }
-        } else if p.contains("\"") || p.contains("\"") {
+        } else if p.contains("\"") || p.contains("\'") {
             case = InputCase::InputInvalid;
         } else {
             case = InputCase::Normal;
