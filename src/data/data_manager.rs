@@ -52,7 +52,7 @@ impl DataManager {
             DataAction::Add => {
                 match data.object_by_source_mut(current_dir.clone()) {
                     Err(_) => {
-                        self.set_new_rules(
+                        self.set_new_rule(
                             &mut data,
                             args.keyword.clone(),
                             current_dir,

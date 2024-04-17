@@ -34,19 +34,23 @@ impl DataManager {
                 process::exit(1)
             }
             InputCase::DupQuotes => {
-                let keyword_trimmed = keyword.trim_matches('\"').to_string();
-                data.targets.insert(keyword_trimmed, target_path.clone());
+                let keyword_trimmed = keyword.trim_matches('\"').trim_matches('\'').to_string();
+                let target_trimmed = target_path
+                    .trim_matches('\"')
+                    .trim_matches('\'')
+                    .to_string();
+                data.targets.insert(keyword_trimmed, target_trimmed);
                 println!("rule added.");
             }
             InputCase::Normal => {
-                data.targets.insert(keyword, target_path.clone());
+                data.targets.insert(keyword, target_path);
                 println!("rule added.");
             }
         }
         Ok(())
     }
 
-    pub fn set_new_rules(
+    pub fn set_new_rule(
         &self,
         data: &mut DataModel,
         keyword: String,
