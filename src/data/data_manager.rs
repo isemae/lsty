@@ -15,6 +15,8 @@ use std::{
     io::{self, prelude::*},
 };
 
+use super::model::DataObject;
+
 pub struct DataManager;
 
 pub enum DataAction {
@@ -24,8 +26,8 @@ pub enum DataAction {
     Import,
     Alias,
     Scan,
+    List,
     Edit,
-    Default,
 }
 
 impl From<&Commands> for DataAction {
@@ -37,8 +39,8 @@ impl From<&Commands> for DataAction {
             Commands::Alias { .. } => DataAction::Alias,
             Commands::Import { .. } => DataAction::Import,
             Commands::Scan { .. } => DataAction::Scan,
+            Commands::List { .. } => DataAction::List,
             Commands::Edit { .. } => DataAction::Edit,
-            _ => DataAction::Default,
         }
     }
 }
@@ -131,6 +133,20 @@ impl DataManager {
                             }
                         }
                     }
+                }
+            },
+            DataAction::List => match data.object_by_source_mut(current_dir.clone()) {
+                Err(_) => {}
+                Ok(obj) => {
+                    let mut keys: Vec<_> = obj.targets.keys().cloned().collect();
+                    keys.sort();
+                    println!(
+                        "{}",
+                        msg_format(MsgKind::ListRule(MsgArgs {
+                            primary_keyword: keys.join("\n"),
+                            ..Default::default()
+                        })),
+                    )
                 }
             },
             DataAction::Move => {

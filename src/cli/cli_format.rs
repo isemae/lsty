@@ -31,6 +31,7 @@ pub enum MsgKind {
     UpdatedAlias(MsgArgs),
     DeleteRule(MsgArgs),
     NoRuleShowAvailable(MsgArgs),
+    ListRule(MsgArgs),
     RuleInfo(MsgArgs),
     AlreadyExistsTryEdit(MsgArgs),
 }
@@ -69,6 +70,9 @@ pub fn msg_format(kind: MsgKind) -> String {
                 args.primary_keyword,
                 args.primary_path
             )
+        }
+        MsgKind::ListRule(args) => {
+            format!("Keywords for current directory:\n{}", args.primary_keyword)
         }
         MsgKind::DeleteRule(args) => {
             format!(
