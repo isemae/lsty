@@ -52,7 +52,7 @@ impl DataManager {
             DataAction::Add => {
                 match data.object_by_source_mut(current_dir.clone()) {
                     Err(_) => {
-                        self.set_new_rule(
+                        self.set_empty_rule(
                             &mut data,
                             args.keyword.clone(),
                             current_dir,
@@ -88,15 +88,12 @@ impl DataManager {
                         println!("deleted rule successfully.");
                         self.save_json_data(&data)?;
                     } else {
+                        let mut keys: Vec<_> = obj.targets.keys().cloned().collect();
+                        keys.sort();
                         return Err(io::Error::new(
                             io::ErrorKind::NotFound,
                             msg_format(MsgKind::NoRuleShowAvailable(MsgArgs {
-                                primary_keyword: obj
-                                    .targets
-                                    .keys()
-                                    .cloned()
-                                    .collect::<Vec<_>>()
-                                    .join("\n"),
+                                primary_keyword: keys.join("\n"),
                                 ..Default::default()
                             })),
                         ));
