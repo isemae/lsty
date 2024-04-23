@@ -53,7 +53,7 @@ pub enum Commands {
     #[command(alias = "-e")]
     #[strum(serialize = "edit")]
     Edit {
-        keyword: String,
+        keyword: Option<String>,
         replace: Option<String>,
     },
 
@@ -146,7 +146,7 @@ impl Commands {
             ),
 
             Commands::Edit { keyword, replace } => SubArgs::new(
-                keyword.clone(),
+                keyword.clone().unwrap_or(String::from("")),
                 default_path,
                 replace.clone().unwrap_or("".to_string()),
             ),
