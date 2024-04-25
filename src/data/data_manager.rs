@@ -10,10 +10,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use std::{env, io};
 
-use super::model::DataObject;
-
 pub struct DataManager;
-
 pub enum DataAction {
     Add,
     Delete,
@@ -213,7 +210,6 @@ impl DataManager {
                     }
                 }
             }
-            _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
         }
         Ok(())
     }

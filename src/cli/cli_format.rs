@@ -2,22 +2,12 @@ use super::status_symbols::{status_symbol, Status::*};
 use camino::Utf8PathBuf;
 use crossterm::style::Stylize;
 
+#[derive(Default)]
 pub struct MsgArgs {
     pub primary_keyword: String,
     pub secondary_keyword: String,
     pub primary_path: String,
     pub secondary_path: String,
-}
-
-impl Default for MsgArgs {
-    fn default() -> Self {
-        MsgArgs {
-            primary_keyword: String::new(),
-            secondary_keyword: String::new(),
-            primary_path: String::new(),
-            secondary_path: String::new(),
-        }
-    }
 }
 
 // category - action - condition
@@ -127,9 +117,7 @@ pub fn error_format(kind: ErrorKind) -> String {
                 status_symbol(&Error)
             )
         }
-        ErrorKind::NotFoundAlias => {
-            format!("NOT FOUND: no rule for the alias found.")
-        }
-        ErrorKind::NotFoundRuleForPath => format!("NOT FOUND: no rule for the path found."),
+        ErrorKind::NotFoundAlias => "NOT FOUND: no rule for the alias found.".to_string(),
+        ErrorKind::NotFoundRuleForPath => "NOT FOUND: no rule for the path found.".to_string(),
     }
 }

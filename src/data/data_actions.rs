@@ -286,11 +286,11 @@ impl DataManager {
                     &PathBuf::from(&new_entry),
                 )
                 .expect("");
-                fs::remove_dir_all(&entry_path).expect("");
+                fs::remove_dir_all(entry_path).expect("");
             }
             false => {
-                fs::copy(&entry_path, new_entry).expect("");
-                fs::remove_file(&entry_path).expect("");
+                fs::copy(entry_path, new_entry).expect("");
+                fs::remove_file(entry_path).expect("");
             }
         }
     }

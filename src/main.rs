@@ -2,7 +2,7 @@ mod cli;
 mod data;
 
 use clap::Parser;
-use cli::commands::{command_manager, commands};
+use cli::command::{command_manager, commands};
 
 fn main() {
     let args = commands::Config::parse();
