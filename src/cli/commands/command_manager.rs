@@ -1,6 +1,6 @@
 use camino::Utf8PathBuf;
 
-use super::arguments::Config;
+use super::commands::Config;
 use crate::data::data_manager::DataManager;
 use std::io::Result;
 

@@ -4,7 +4,7 @@ use crate::{
         menu,
         status_symbols::{status_symbol, Status::*},
     },
-    commands::arguments::{Commands, SubArgs},
+    commands::{Commands, SubArgs},
     data::model::DataModel,
 };
 use camino::Utf8PathBuf;

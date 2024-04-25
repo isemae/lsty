@@ -1,12 +1,11 @@
 mod cli;
-mod commands;
 mod data;
 
 use clap::Parser;
-use commands::{arguments, command_manager};
+use cli::commands::{command_manager, commands};
 
 fn main() {
-    let args = arguments::Config::parse();
+    let args = commands::Config::parse();
 
     match command_manager::process_command(&args) {
         Ok(()) => {}
