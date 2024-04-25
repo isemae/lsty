@@ -23,6 +23,7 @@ use camino::Utf8PathBuf;
 use regex::Regex;
 use unicode_normalization::UnicodeNormalization;
 
+// Add new rule in lsty.json
 impl DataManager {
     pub fn add_rule_to_json(
         &self,
@@ -60,6 +61,7 @@ impl DataManager {
         Ok(())
     }
 
+    // set an empty rule when lsty.json is empty or has invalid data
     pub fn set_empty_rule(
         &self,
         data: &mut DataModel,
@@ -74,25 +76,10 @@ impl DataManager {
         };
         data.data.push(new_obj)
     }
+}
 
-    pub fn set_alias(&self, data: &mut DataObject, alias: String) -> Result<(), io::Error> {
-        if alias.contains('/') || alias.contains('\\') {
-            Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                error_format(ErrorKind::InvalidAlias),
-            ))
-        } else {
-            if menu::get_yn_input(msg_format(MsgKind::UpdatingAlias(MsgArgs {
-                primary_keyword: data.alias.clone(),
-                secondary_keyword: alias.clone(),
-                ..Default::default()
-            }))) {
-                data.alias = alias;
-            }
-            Ok(())
-        }
-    }
-
+// Edit a rule
+impl DataManager {
     pub fn edit_rule(&self, obj: &mut DataObject, keyword: String, replacement: String) {
         let targets = obj.targets.clone();
         if let Some(target_path) = targets.get(&keyword) {
@@ -144,6 +131,27 @@ impl DataManager {
         println!("rule updated.")
     }
 
+    pub fn set_alias(&self, data: &mut DataObject, alias: String) -> Result<(), io::Error> {
+        if alias.contains('/') || alias.contains('\\') {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                error_format(ErrorKind::InvalidAlias),
+            ))
+        } else {
+            if menu::get_yn_input(msg_format(MsgKind::UpdatingAlias(MsgArgs {
+                primary_keyword: data.alias.clone(),
+                secondary_keyword: alias.clone(),
+                ..Default::default()
+            }))) {
+                data.alias = alias;
+            }
+            Ok(())
+        }
+    }
+}
+
+// Import rules from one of the other source paths
+impl DataManager {
     pub fn import_rule(
         &self,
         data: &mut DataModel,
@@ -202,7 +210,10 @@ impl DataManager {
         }
         Ok(())
     }
+}
 
+// Remove rule
+impl DataManager {
     pub fn remove_rule_from_json(
         &self,
         data: &mut DataObject,
@@ -221,35 +232,10 @@ impl DataManager {
         }
         Ok(())
     }
-    pub fn normalize_entry(&self, entry: &DirEntry) -> String {
-        let entry_path = entry.path();
-        let entry_name = match entry_path.file_name() {
-            Some(name) => name,
-            None => return String::new(),
-        };
-        entry_name.to_string_lossy().nfc().collect::<String>()
-    }
+}
 
-    fn validate_pair(&self, targets: &HashMap<String, String>) -> Option<HashMap<String, String>> {
-        let mut valid_pair = HashMap::new();
-
-        for map in targets.iter() {
-            if !PathBuf::from(map.1).exists() {
-                eprintln!(
-                            " {} \x1b[0;33mtarget path '{}' doesn't exist. Creating the directory...\x1b[0m",
-                            status_symbol(&Caution), map.1
-                        );
-                fs::create_dir_all(map.1)
-                    .expect("Error: failed to create target directory on disk.");
-
-                valid_pair.insert(map.0.clone(), map.1.clone());
-            } else {
-                valid_pair.insert(map.0.clone(), map.1.clone());
-            }
-        }
-        Some(valid_pair)
-    }
-
+// Move(rename) entry
+impl DataManager {
     pub fn rename_entries(&self, data: &DataObject, keyword: &str) -> Result<(), io::Error> {
         let mut moved_count = 0;
         let current_dir = current_dir()?;
@@ -339,6 +325,29 @@ impl DataManager {
         }
         Ok(())
     }
+}
+
+impl DataManager {
+    fn validate_pair(&self, targets: &HashMap<String, String>) -> Option<HashMap<String, String>> {
+        let mut valid_pair = HashMap::new();
+
+        for map in targets.iter() {
+            if !PathBuf::from(map.1).exists() {
+                eprintln!(
+                            " {} \x1b[0;33mtarget path '{}' doesn't exist. Creating the directory...\x1b[0m",
+                            status_symbol(&Caution), map.1
+                        );
+                fs::create_dir_all(map.1)
+                    .expect("Error: failed to create target directory on disk.");
+
+                valid_pair.insert(map.0.clone(), map.1.clone());
+            } else {
+                valid_pair.insert(map.0.clone(), map.1.clone());
+            }
+        }
+        Some(valid_pair)
+    }
+
     pub fn scan_current_path(
         &self,
         data: &DataObject,
@@ -376,5 +385,13 @@ impl DataManager {
             }
         }
         Ok(entry_map)
+    }
+    pub fn normalize_entry(&self, entry: &DirEntry) -> String {
+        let entry_path = entry.path();
+        let entry_name = match entry_path.file_name() {
+            Some(name) => name,
+            None => return String::new(),
+        };
+        entry_name.to_string_lossy().nfc().collect::<String>()
     }
 }
