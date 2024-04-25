@@ -5,15 +5,10 @@ use crate::{
         status_symbols::{status_symbol, Status::*},
     },
     commands::{Commands, SubArgs},
-    data::model::DataModel,
+    data::{json_manager, model::DataModel},
 };
 use camino::Utf8PathBuf;
-use serde::ser::Error;
-use std::{
-    env,
-    fs::File,
-    io::{self, prelude::*},
-};
+use std::{env, io};
 
 use super::model::DataObject;
 
@@ -47,9 +42,11 @@ impl From<&Commands> for DataAction {
 
 impl DataManager {
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> Result<(), io::Error> {
-        let mut data = self.parse_json_data().unwrap_or_else(|_| DataModel::new());
+        let json = json_manager::JsonManager;
+        let mut data = json.parse_json_data().unwrap_or_else(|_| DataModel::new());
         let current_dir = Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default())
             .expect("valid Unicode path succeeded");
+
         match action {
             DataAction::Add => {
                 match data.object_by_source_mut(current_dir.clone()) {
@@ -78,7 +75,7 @@ impl DataManager {
                         )?;
                     }
                 }
-                self.save_json_data(&data)?;
+                json.save_json_data(&data)?;
             }
             DataAction::Delete => match data.object_by_source_mut(current_dir) {
                 Err(e) => {
@@ -88,7 +85,7 @@ impl DataManager {
                     if obj.targets.get(&args.keyword).is_some() {
                         self.remove_rule_from_json(obj, args.keyword.as_str())?;
                         println!("deleted rule successfully.");
-                        self.save_json_data(&data)?;
+                        json.save_json_data(&data)?;
                     } else {
                         let mut keys: Vec<_> = obj.targets.keys().cloned().collect();
                         keys.sort();
@@ -155,10 +152,12 @@ impl DataManager {
                 }
             }
             DataAction::Import => {
-                if let Err(e) =
-                    self.import_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
+                match self.import_rule(&mut data, args.keyword.clone(), args.secondary_path.clone())
                 {
-                    eprintln!("Error: {}", e)
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                    }
+                    Ok(()) => json.save_json_data(&data)?,
                 }
             }
             DataAction::Edit => match data.object_by_source_mut(current_dir) {
@@ -168,7 +167,7 @@ impl DataManager {
                 Ok(obj) => {
                     if obj.targets.get(&args.keyword).is_some() {
                         self.edit_rule(obj, args.keyword.clone(), args.secondary_path.clone());
-                        self.save_json_data(&data).expect("");
+                        json.save_json_data(&data).expect("");
                     } else {
                         return Err(io::Error::new(
                             io::ErrorKind::NotFound,
@@ -209,41 +208,13 @@ impl DataManager {
                                     ..Default::default()
                                 }),)
                             );
-                            self.save_json_data(&data)?
+                            json.save_json_data(&data)?
                         }
                     }
                 }
             }
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknown action")),
         }
-        Ok(())
-    }
-
-    pub fn parse_json_data(&self) -> Result<DataModel, serde_json::Error> {
-        let exe_path = env::current_exe().unwrap();
-        let exe_dir = exe_path.parent().unwrap();
-        match File::open(exe_dir.join("lsty.json")) {
-            Err(e) => Err(serde_json::Error::custom(format!(
-                "failed to load data file: {}",
-                e
-            ))),
-            Ok(mut file) => {
-                let mut data = String::new();
-                match file.read_to_string(&mut data) {
-                    Ok(..) => {}
-                    Err(e) => eprintln!("Error: {}", e),
-                }
-                serde_json::from_str(data.as_str())
-            }
-        }
-    }
-
-    pub fn save_json_data(&self, data: &DataModel) -> Result<(), io::Error> {
-        let exe_path = env::current_exe().unwrap();
-        let exe_dir = exe_path.parent().unwrap();
-
-        let mut file = File::create(exe_dir.join("lsty.json"))?;
-        serde_json::to_writer_pretty(&mut file, data)?;
         Ok(())
     }
 }

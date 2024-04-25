@@ -189,26 +189,21 @@ impl DataManager {
                 }
             };
 
-            println!("do you want to import rules: ");
+            println!("{} do you want to import rules: ", status_symbol(&YN));
             for (k, v) in &targets {
-                println!("  keyword: {}, target path: \x1b[4m{}\x1b[0m\x1b[0m", k, v);
+                println!(" - keyword: {}, target path: \x1b[4m{}\x1b[0m\x1b[0m", k, v);
             }
-            println!();
-            match menu::get_yn_input(msg_format(FromPath(MsgArgs {
+            if menu::get_yn_input(msg_format(FromPath(MsgArgs {
                 primary_path: import_path,
                 ..Default::default()
             }))) {
-                true => {
-                    current_obj.targets.extend(targets);
-                    self.save_json_data(data)?;
-                    println!("rules imported.")
-                }
-                false => {}
+                current_obj.targets.extend(targets);
+                println!("rules imported.");
             }
+            Ok(())
         } else {
-            return Err(io::Error::new(io::ErrorKind::NotFound, error_message));
+            Err(io::Error::new(io::ErrorKind::NotFound, error_message))
         }
-        Ok(())
     }
 }
 
@@ -327,6 +322,7 @@ impl DataManager {
     }
 }
 
+// Pre-rename(move) processings
 impl DataManager {
     fn validate_pair(&self, targets: &HashMap<String, String>) -> Option<HashMap<String, String>> {
         let mut valid_pair = HashMap::new();
@@ -386,6 +382,7 @@ impl DataManager {
         }
         Ok(entry_map)
     }
+
     pub fn normalize_entry(&self, entry: &DirEntry) -> String {
         let entry_path = entry.path();
         let entry_name = match entry_path.file_name() {
