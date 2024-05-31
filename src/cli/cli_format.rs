@@ -92,6 +92,7 @@ pub fn msg_format(kind: MsgKind) -> String {
                 "{} no such rule for the keyword in the current path. \nkeywords available for current path:\n{}",
                 status_symbol(&NotFound),
                     args.primary_keyword.cyan(),
+
             )
         }
 

@@ -8,7 +8,7 @@ use crate::{
     data::{json_manager, model::DataModel},
 };
 use camino::Utf8PathBuf;
-use std::{env, io};
+use std::{collections::HashMap, env, io};
 
 pub struct DataManager;
 pub enum DataAction {
@@ -63,7 +63,7 @@ impl DataManager {
                                 primary_path: args.primary_path.clone(),
                                 secondary_path: args.secondary_path.clone(),
                                 ..Default::default()
-                            },),)
+                            }))
                         );
                         self.add_rule_to_json(
                             obj,
@@ -84,12 +84,12 @@ impl DataManager {
                         println!("deleted rule successfully.");
                         json.save_json_data(&data)?;
                     } else {
-                        let mut keys: Vec<_> = obj.targets.keys().cloned().collect();
-                        keys.sort();
+                        let targets = &obj.targets;
+                        let pairs = self.handle_pairs_list(targets);
                         return Err(io::Error::new(
                             io::ErrorKind::NotFound,
                             msg_format(MsgKind::NoRuleShowAvailable(MsgArgs {
-                                primary_keyword: keys.join("\n"),
+                                primary_keyword: pairs,
                                 ..Default::default()
                             })),
                         ));
@@ -132,12 +132,12 @@ impl DataManager {
             DataAction::List => match data.object_by_source_mut(current_dir.clone()) {
                 Err(_) => {}
                 Ok(obj) => {
-                    let mut keys: Vec<_> = obj.targets.keys().cloned().collect();
-                    keys.sort();
+                    let targets = &obj.targets;
+                    let pairs = self.handle_pairs_list(targets);
                     println!(
                         "{}",
                         msg_format(MsgKind::ListRule(MsgArgs {
-                            primary_keyword: keys.join("\n"),
+                            primary_keyword: pairs,
                             ..Default::default()
                         })),
                     )
@@ -162,19 +162,16 @@ impl DataManager {
                     eprintln!("no such rule for the keyword");
                 }
                 Ok(obj) => {
-                    if obj.targets.get(&args.keyword).is_some() {
+                    let targets = &obj.targets;
+                    if targets.get(&args.keyword).is_some() {
                         self.edit_rule(obj, args.keyword.clone(), args.secondary_path.clone());
                         json.save_json_data(&data).expect("");
                     } else {
+                        let pairs = self.handle_pairs_list(targets);
                         return Err(io::Error::new(
                             io::ErrorKind::NotFound,
                             msg_format(MsgKind::NoRuleShowAvailable(MsgArgs {
-                                primary_keyword: obj
-                                    .targets
-                                    .keys()
-                                    .cloned()
-                                    .collect::<Vec<_>>()
-                                    .join("\n"),
+                                primary_keyword: pairs,
                                 ..Default::default()
                             })),
                         ));
@@ -212,5 +209,16 @@ impl DataManager {
             }
         }
         Ok(())
+    }
+
+    fn handle_pairs_list(&self, pairs: &HashMap<String, String>) -> String {
+        let mut result = String::new();
+        let mut sorted: Vec<(&String, &String)> = pairs.iter().collect();
+        sorted.sort_by_key(|&(k, _)| k);
+
+        for &(k, v) in &sorted {
+            result.push_str(&format!(" '{}' ~> '{}'\n", k, v));
+        }
+        result
     }
 }
