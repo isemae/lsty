@@ -10,6 +10,11 @@ pub struct MsgArgs {
     pub secondary_path: String,
 }
 
+pub struct ConfirmationResult {
+    pub bool: bool,
+    pub message: String,
+}
+
 // category - action - condition
 pub enum MsgKind {
     TargetChangePath(MsgArgs),
@@ -24,6 +29,7 @@ pub enum MsgKind {
     ListRule(MsgArgs),
     RuleInfo(MsgArgs),
     AlreadyExistsTryEdit(MsgArgs),
+    ActualPathNonExists(MsgArgs),
 }
 
 pub enum ErrorKind {
@@ -45,6 +51,15 @@ pub fn msg_format(kind: MsgKind) -> String {
                 status_symbol(&YN),
                 args.primary_keyword,
                 args.secondary_keyword
+            )
+        }
+        MsgKind::ActualPathNonExists(args) => {
+            format!(
+                "{0} change path '{1}' -> '{2}'? \n(path '{3}' doesn't exist on system. the new path will be created when moving files).",
+                status_symbol(&YN),
+                args.primary_path,
+                args.secondary_path,
+                args.secondary_path,
             )
         }
         MsgKind::NoKeywordOrPathForReplace(args) => {

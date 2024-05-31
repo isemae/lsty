@@ -1,6 +1,8 @@
 use crate::{
     cli::{
-        cli_format::{error_format, msg_format, ErrorKind, MsgArgs, MsgKind, MsgKind::*},
+        cli_format::{
+            error_format, msg_format, ConfirmationResult, ErrorKind, MsgArgs, MsgKind, MsgKind::*,
+        },
         menu,
         status_symbols::{status_symbol, Status::*},
     },
@@ -80,55 +82,23 @@ impl DataManager {
 
 // Edit a rule
 impl DataManager {
-    pub fn edit_rule(&self, obj: &mut DataObject, keyword: String, replacement: String) {
+    pub fn edit_rule(&self, obj: &mut DataObject, arg: String, replacement: String) {
         let targets = obj.targets.clone();
-        if let Some(target_path) = targets.get(&keyword) {
-            if !replacement.is_empty() {
-                let is_replacement_dir = Utf8PathBuf::from(&replacement).is_dir();
-                let confirmation = if is_replacement_dir {
-                    msg_format(MsgKind::TargetChangePath(MsgArgs {
-                        primary_keyword: keyword.clone(),
-                        primary_path: target_path.to_string(),
-                        secondary_path: replacement.clone(),
-                        ..Default::default()
-                    }))
-                } else if !replacement.contains('\\')
-                    && !replacement.contains('/')
-                    && !replacement.contains('~')
-                {
-                    msg_format(MsgKind::TargetChangeKeyword(MsgArgs {
-                        primary_keyword: keyword.clone(),
-                        secondary_keyword: replacement.clone(),
-                        ..Default::default()
-                    }))
+        if let Some(target_path) = targets.get(&arg) {
+            let confirmation =
+                self.confirmation(target_path.clone(), arg.clone(), replacement.clone());
+            if menu::get_yn_input(confirmation.message) {
+                obj.targets.remove(&arg);
+                if confirmation.bool {
+                    obj.targets.insert(arg, replacement.clone());
                 } else {
-                    eprintln!("invalid path.");
-                    return;
-                };
-
-                if menu::get_yn_input(confirmation) {
-                    obj.targets.remove(&keyword);
-                    if is_replacement_dir {
-                        obj.targets.insert(keyword, replacement.clone());
-                    } else {
-                        obj.targets.insert(replacement, target_path.to_string());
-                    }
-                } else {
-                    process::exit(1);
+                    obj.targets.insert(replacement, target_path.to_string());
                 }
+                println!("rule updated.")
             } else {
-                println!(
-                    "{}",
-                    msg_format(MsgKind::NoKeywordOrPathForReplace(MsgArgs {
-                        primary_keyword: keyword,
-                        primary_path: target_path.clone(),
-                        ..Default::default()
-                    }))
-                );
                 process::exit(1);
             }
         }
-        println!("rule updated.")
     }
 
     pub fn set_alias(&self, data: &mut DataObject, alias: String) -> Result<(), io::Error> {
@@ -146,6 +116,62 @@ impl DataManager {
                 data.alias = alias;
             }
             Ok(())
+        }
+    }
+
+    pub fn confirmation(
+        &self,
+        target: String,
+        arg: String,
+        replacement: String,
+    ) -> ConfirmationResult {
+        let is_replacement_dir = Utf8PathBuf::from(&replacement).is_dir();
+        let is_trimmed_replacement_dir = if let Some(i) = replacement.rfind('/') {
+            let upper_dir = &replacement[..i];
+            Utf8PathBuf::from(upper_dir).is_dir()
+        } else {
+            false
+        };
+
+        if !replacement.is_empty() {
+            match (is_replacement_dir, is_trimmed_replacement_dir) {
+                (true, _) => ConfirmationResult {
+                    bool: true,
+                    message: msg_format(MsgKind::TargetChangePath(MsgArgs {
+                        primary_keyword: arg.clone(),
+                        primary_path: target.to_string(),
+                        secondary_path: replacement.clone(),
+                        ..Default::default()
+                    })),
+                },
+                (false, true) => ConfirmationResult {
+                    bool: true,
+                    message: msg_format(MsgKind::ActualPathNonExists(MsgArgs {
+                        primary_path: target.to_string(),
+                        primary_keyword: arg.clone(),
+                        secondary_path: replacement.clone(),
+                        ..Default::default()
+                    })),
+                },
+                _ => ConfirmationResult {
+                    bool: false,
+                    message: msg_format(MsgKind::TargetChangeKeyword(MsgArgs {
+                        primary_keyword: arg.clone(),
+                        secondary_keyword: replacement.clone(),
+                        ..Default::default()
+                    })),
+                },
+            }
+        } else {
+            println!(
+                "{}",
+                msg_format(MsgKind::NoKeywordOrPathForReplace(MsgArgs {
+                    primary_keyword: arg,
+                    primary_path: target.clone(),
+                    ..Default::default()
+                }))
+            );
+            process::exit(1);
         }
     }
 }
@@ -240,12 +266,13 @@ impl DataManager {
         println!("\nSOURCE: \x1b[4m{}\x1b[0m\x1b[0m", current_dir_str);
         for (target, vec) in entries_map {
             println!("\r└→ TARGET: \x1b[4m{}\x1b[0m\x1b[0m ", target);
+            println!("{:?}", vec);
             for entry in vec.clone() {
                 let new_entry = format!("{}/{}", target, entry);
                 let entry_symbol = menu::entry_symbol(&entry);
 
                 if !new_entry.is_empty() {
-                    match Path::new(&new_entry).exists() {
+                    match !vec.is_empty() && Path::new(&new_entry).exists() {
                         true => {
                             println!(
                                 "  {0} {1} {2} already exists in the target directory.",
