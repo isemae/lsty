@@ -33,7 +33,16 @@ impl DataManager {
         target_path: String,
         keyword: String,
     ) -> io::Result<()> {
-        match check_input(data, target_path.clone(), keyword.clone()) {
+        let current_dir = Utf8PathBuf::from_path_buf(current_dir().unwrap_or_default())
+            .expect("valid Unicode path succeeded");
+        let current_dir_str = current_dir.as_str();
+        let keyword_trimmed = keyword.trim_matches('\"').trim_matches('\'').to_string();
+        let target_trimmed = target_path
+            .trim_matches('\"')
+            .trim_matches('\'')
+            .to_string();
+
+        match check_input(data, keyword_trimmed.clone(), target_trimmed.clone()) {
             InputCase::PathExists => {
                 println!(
                     "{}",
@@ -45,20 +54,24 @@ impl DataManager {
                 );
                 process::exit(1)
             }
-            InputCase::InputInvalid => process::exit(1),
-            InputCase::DupQuotes => {
-                let keyword_trimmed = keyword.trim_matches('\"').trim_matches('\'').to_string();
-                let target_trimmed = target_path
-                    .trim_matches('\"')
-                    .trim_matches('\'')
-                    .to_string();
+            InputCase::CurrentDir => {
+                let target_in_current_dir = format!(
+                    "{}/{}",
+                    current_dir_str,
+                    target_trimmed.trim_start_matches("./")
+                );
+                data.targets.insert(keyword_trimmed, target_in_current_dir);
+                println!("rule added.");
+                println!(
+                    "Note: the actual directory doesn't exist yet. it will be created later when the files are moved."
+                );
+            }
+            // InputCase::InputInvalid => process::exit(1),
+            InputCase::Normal => {
                 data.targets.insert(keyword_trimmed, target_trimmed);
                 println!("rule added.");
             }
-            InputCase::Normal => {
-                data.targets.insert(keyword, target_path.clone());
-                println!("rule added.");
-            }
+            InputCase::Invalid => process::exit(1),
         }
         Ok(())
     }
@@ -270,13 +283,18 @@ impl DataManager {
         println!("\nSOURCE: \x1b[4m{}\x1b[0m\x1b[0m", current_dir_str);
         for (target, vec) in entries_map {
             println!("\r└→ TARGET: \x1b[4m{}\x1b[0m\x1b[0m ", target);
-            println!("{:?}", vec);
             for entry in vec.clone() {
+                println!("{}", entry);
                 let new_entry = format!("{}/{}", target, entry);
                 let entry_symbol = menu::entry_symbol(&entry);
 
+                println!("{}", new_entry);
+
                 if !new_entry.is_empty() {
-                    match !vec.is_empty() && Path::new(&new_entry).exists() {
+                    match !vec.is_empty()
+                        && Path::new(&new_entry).exists()
+                        // && vec.iter().any(|e| e == &new_entry)
+                    {
                         true => {
                             println!(
                                 "  {0} {1} {2} already exists in the target directory.",
@@ -366,7 +384,6 @@ impl DataManager {
                         );
                 fs::create_dir_all(map.1)
                     .expect("Error: failed to create target directory on disk.");
-
                 valid_pair.insert(map.0.clone(), map.1.clone());
             } else {
                 valid_pair.insert(map.0.clone(), map.1.clone());

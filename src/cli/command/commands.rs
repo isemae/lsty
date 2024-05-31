@@ -1,13 +1,7 @@
-use crate::{
-    cli::{
-        menu,
-        status_symbols::{status_symbol, Status::*},
-    },
-    data::data_manager::{DataAction, DataManager},
-};
+use crate::data::data_manager::{DataAction, DataManager};
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
-use std::{io, process};
+use std::io;
 use strum_macros::{EnumString, VariantNames};
 
 #[derive(Parser, Debug)]
@@ -96,22 +90,7 @@ impl Commands {
             } => SubArgs::new(
                 keyword.to_lowercase(),
                 default_path,
-                if target_path.is_some() {
-                    target_path.clone().unwrap()
-                } else {
-                    match menu::get_yn_input(format!("{} target path is not provided. make a new target path to the keyword in the current directory?", status_symbol(&YN))) {
-                        true => {
-                            println!(
-                                "Note: the actual directory doesn't exist yet. it will be created later when the files are moved."
-                            );
-                            target_path.clone().unwrap_or(format!("./{}", &keyword))
-                        }
-                        false => {
-                            eprintln!("target path input should be given.");
-                            process::exit(1)
-                        }
-                    }
-                },
+                target_path.clone().unwrap_or("".to_string()),
             ),
 
             Commands::Del { keyword } => SubArgs::new(

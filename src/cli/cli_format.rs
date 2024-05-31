@@ -30,12 +30,14 @@ pub enum MsgKind {
     RuleInfo(MsgArgs),
     AlreadyExistsTryEdit(MsgArgs),
     ActualPathNonExists(MsgArgs),
+    PathNotProvided(MsgArgs),
 }
 
 pub enum ErrorKind {
     InvalidAlias,
     NotFoundAlias,
     NotFoundRuleForPath,
+    PathShouldBeGiven,
 }
 
 pub fn msg_format(kind: MsgKind) -> String {
@@ -122,6 +124,9 @@ pub fn msg_format(kind: MsgKind) -> String {
         MsgKind::AlreadyExistsTryEdit(args) => {
             format!("rule already exists.\nNote: Try \"\x1b[4mlsty edit {0} {1}\x1b[0m\x1b[0m\" or \"\x1b[4mlsty -e {0} {1}\x1b[0m\x1b[0m\" to edit the path.", args.primary_keyword, args.primary_path)
         }
+        MsgKind::PathNotProvided(args) => {
+            format!("{} target path is not provided. make a new target path to the keyword in the current directory? ({}{})",status_symbol(&YN), args.primary_path, args.primary_keyword)
+        }
     }
 }
 
@@ -135,5 +140,6 @@ pub fn error_format(kind: ErrorKind) -> String {
         }
         ErrorKind::NotFoundAlias => "NOT FOUND: no rule for the alias found.".to_string(),
         ErrorKind::NotFoundRuleForPath => "NOT FOUND: no rule for the path found.".to_string(),
+        ErrorKind::PathShouldBeGiven => "INVALID INPUT: target path should be given.".to_string(),
     }
 }
