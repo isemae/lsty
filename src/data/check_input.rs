@@ -14,8 +14,7 @@ pub enum InputCase {
 use camino::Utf8PathBuf;
 
 pub fn check_input(d: &DataObject, k: String, p: String) -> InputCase {
-    let current_dir = Utf8PathBuf::from_path_buf(current_dir().unwrap_or_default())
-        .expect("valid Unicode path succeeded");
+    let current_dir = Utf8PathBuf::from_path_buf(current_dir().unwrap_or_default()).expect("");
     let current_dir_str = current_dir.as_str();
     let target_in_current_dir = format!("{}/{}", current_dir_str, k);
 

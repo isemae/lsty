@@ -1,6 +1,6 @@
 use crate::{
     cli::{
-        cli_format::{msg_format, MsgArgs, MsgKind},
+        cli_format::{error_format, msg_format, ErrorKind, MsgArgs, MsgKind},
         menu,
         status_symbols::{status_symbol, Status::*},
     },
@@ -41,8 +41,8 @@ impl DataManager {
     pub fn match_action(&mut self, action: DataAction, args: &SubArgs) -> Result<(), io::Error> {
         let json = json_manager::JsonManager;
         let mut data = json.parse_json_data().unwrap_or_else(|_| DataModel::new());
-        let current_dir = Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default())
-            .expect("valid Unicode path succeeded");
+        let current_dir =
+            Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default()).expect("");
 
         match action {
             DataAction::Add => {
@@ -72,7 +72,7 @@ impl DataManager {
                 Ok(obj) => {
                     if obj.targets.get(&args.keyword).is_some() {
                         self.remove_rule_from_json(obj, args.keyword.as_str())?;
-                        println!("deleted rule successfully.");
+                        println!("{}", msg_format(MsgKind::DeletedRule));
                         json.save_json_data(&data)?;
                     } else {
                         let targets = &obj.targets;
@@ -91,10 +91,7 @@ impl DataManager {
                 Err(_) => {
                     return Err(io::Error::new(
                         io::ErrorKind::NotFound,
-                        format!(
-                            "{} no rule for the current path in the data",
-                            status_symbol(&Error)
-                        ),
+                        error_format(ErrorKind::NoRuleForPath),
                     ));
                 }
                 Ok(obj) => {
@@ -150,7 +147,7 @@ impl DataManager {
             }
             DataAction::Edit => match data.object_by_source_mut(current_dir) {
                 Err(_) => {
-                    eprintln!("no such rule for the keyword");
+                    eprintln!("{}", msg_format(MsgKind::RuleNonExistsForKeyword));
                 }
                 Ok(obj) => {
                     let targets = &obj.targets;
@@ -173,7 +170,7 @@ impl DataManager {
                 if let Some(o) = data.data.iter().find(|o| o.alias == args.keyword) {
                     return Err(io::Error::new(
                         io::ErrorKind::AlreadyExists,
-                        msg_format(MsgKind::ExistingAlias(MsgArgs {
+                        msg_format(MsgKind::AliasExisting(MsgArgs {
                             primary_keyword: args.keyword.clone(),
                             primary_path: o.source.clone(),
                             ..Default::default()
@@ -187,7 +184,7 @@ impl DataManager {
                         Ok(_) => {
                             println!(
                                 "{}",
-                                msg_format(MsgKind::UpdatedAlias(MsgArgs {
+                                msg_format(MsgKind::AliasUpdated(MsgArgs {
                                     primary_keyword: obj.alias.clone(),
                                     secondary_keyword: args.keyword.clone(),
                                     ..Default::default()

@@ -33,8 +33,7 @@ impl DataManager {
         target_path: String,
         keyword: String,
     ) -> io::Result<()> {
-        let current_dir = Utf8PathBuf::from_path_buf(current_dir().unwrap_or_default())
-            .expect("valid Unicode path succeeded");
+        let current_dir = Utf8PathBuf::from_path_buf(current_dir().unwrap_or_default()).expect("");
         let current_dir_str = current_dir.as_str();
         let keyword_trimmed = keyword.trim_matches('\"').trim_matches('\'').to_string();
         let target_trimmed = target_path
@@ -51,15 +50,13 @@ impl DataManager {
                     target_trimmed.trim_start_matches("./")
                 );
                 data.targets.insert(keyword_trimmed, target_in_current_dir);
-                println!("rule added.");
-                println!(
-                    "Note: the actual directory doesn't exist yet. it will be created later when the files are moved."
-                );
+                println!("{}", msg_format(MsgKind::AddedRule));
+                println!("{}", msg_format(MsgKind::ActualPathWillBeCreated));
             }
             // InputCase::InputInvalid => process::exit(1),
             InputCase::Normal => {
                 data.targets.insert(keyword_trimmed, target_trimmed);
-                println!("rule added.");
+                println!("{}", msg_format(MsgKind::AddedRule));
             }
             InputCase::Invalid => process::exit(1),
         }
@@ -111,7 +108,7 @@ impl DataManager {
                 error_format(ErrorKind::InvalidAlias),
             ))
         } else {
-            if menu::get_yn_input(msg_format(MsgKind::UpdatingAlias(MsgArgs {
+            if menu::get_yn_input(msg_format(MsgKind::AliasUpdating(MsgArgs {
                 primary_keyword: data.alias.clone(),
                 secondary_keyword: alias.clone(),
                 ..Default::default()
@@ -151,7 +148,7 @@ impl DataManager {
                 // replacement is path
                 (true, _) => ConfirmationResult {
                     bool: true,
-                    message: msg_format(MsgKind::TargetChangePath(MsgArgs {
+                    message: msg_format(MsgKind::ChangeTargetPath(MsgArgs {
                         primary_keyword: arg.clone(),
                         primary_path: target.to_string(),
                         secondary_path: replacement.clone(),
@@ -172,7 +169,7 @@ impl DataManager {
                 // replacement is keyword
                 _ => ConfirmationResult {
                     bool: false,
-                    message: msg_format(MsgKind::TargetChangeKeyword(MsgArgs {
+                    message: msg_format(MsgKind::ChangeTargetKeyword(MsgArgs {
                         primary_keyword: arg.clone(),
                         secondary_keyword: replacement.clone(),
                         ..Default::default()
@@ -191,8 +188,8 @@ impl DataManager {
         alias: String,
         mut import_path: String,
     ) -> Result<(), io::Error> {
-        let current_dir = Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default())
-            .expect("valid Unicode path succeeded");
+        let current_dir =
+            Utf8PathBuf::from_path_buf(env::current_dir().unwrap_or_default()).expect("");
 
         let error_message = match (alias.is_empty(), alias.contains('/'), alias.contains('\\')) {
             (true, _, _) => error_format(ErrorKind::NotFoundRuleForPath),
@@ -222,16 +219,23 @@ impl DataManager {
                 }
             };
 
-            println!("{} do you want to import rules: ", status_symbol(&YN));
+            println!("{}", msg_format(ImportYN));
             for (k, v) in &targets {
-                println!(" - keyword: {}, target path: \x1b[4m{}\x1b[0m\x1b[0m", k, v);
+                println!(
+                    "{}",
+                    msg_format(KeywordAndTarget(MsgArgs {
+                        primary_keyword: k.to_string(),
+                        primary_path: v.to_string(),
+                        ..Default::default()
+                    }))
+                );
             }
-            if menu::get_yn_input(msg_format(FromPath(MsgArgs {
+            if menu::get_yn_input(msg_format(ImportFromPath(MsgArgs {
                 primary_path: import_path,
                 ..Default::default()
             }))) {
                 current_obj.targets.extend(targets);
-                println!("rules imported.");
+                println!("{}", msg_format(MsgKind::ImportedRules));
             }
             Ok(())
         } else {
@@ -270,9 +274,21 @@ impl DataManager {
         let current_dir_str = current_dir.to_str().expect("");
 
         let entries_map = self.scan_current_path(data, keyword)?;
-        println!("\nSOURCE: \x1b[4m{}\x1b[0m\x1b[0m", current_dir_str);
+        println!(
+            "{}",
+            msg_format(MsgKind::DisplaySource(MsgArgs {
+                primary_path: current_dir_str.to_string(),
+                ..Default::default()
+            }))
+        );
         for (target, vec) in entries_map {
-            println!("\r└→ TARGET: \x1b[4m{}\x1b[0m\x1b[0m ", target);
+            println!(
+                "{}",
+                msg_format(MsgKind::DisplayTarget(MsgArgs {
+                    primary_path: target.to_string(),
+                    ..Default::default()
+                }))
+            );
             for entry in vec.clone() {
                 println!("{}", entry);
                 let new_entry = format!("{}/{}", target, entry);
@@ -286,12 +302,9 @@ impl DataManager {
                         // && vec.iter().any(|e| e == &new_entry)
                     {
                         true => {
-                            println!(
-                                "  {0} {1} {2} already exists in the target directory.",
-                                status_symbol(&Caution),
-                                entry_symbol,
-                                entry
-                            );
+                            println!("{}", msg_format(MsgKind::AlreadyExistsInTarget(MsgArgs {
+                                secondary_keyword: entry_symbol, primary_path: entry, ..Default::default()
+                            })));
                             continue;
                         }
                         false => {
@@ -305,12 +318,9 @@ impl DataManager {
             }
         }
         if moved_count == 0 {
-            println!(
-                "{} No items to move in the source path.",
-                status_symbol(&Safe)
-            );
+            println!("{}", msg_format(NoItemsToMoveInSource));
         } else {
-            println!("\nDone.")
+            println!("{}", msg_format(SimpleDone))
         }
 
         Ok(())
@@ -345,7 +355,7 @@ impl DataManager {
                 .ok_or_else(|| {
                     io::Error::new(
                         io::ErrorKind::NotFound,
-                        format!("{} no rule for the current path.", status_symbol(&NotFound)),
+                        error_format(ErrorKind::NoRuleForPath),
                     )
                 })?;
 
@@ -369,11 +379,14 @@ impl DataManager {
         for map in targets.iter() {
             if !PathBuf::from(map.1).exists() {
                 eprintln!(
-                            " {} \x1b[0;33mtarget path '{}' doesn't exist. Creating the directory...\x1b[0m",
-                            status_symbol(&Caution), map.1
-                        );
+                    "{}",
+                    msg_format(MsgKind::PathNonExistsCreating(MsgArgs {
+                        primary_path: map.1.to_string(),
+                        ..Default::default()
+                    }))
+                );
                 fs::create_dir_all(map.1)
-                    .expect("Error: failed to create target directory on disk.");
+                    .unwrap_or_else(|_| panic!("{}", error_format(ErrorKind::CreateTargetDirFail)));
                 valid_pair.insert(map.0.clone(), map.1.clone());
             } else {
                 valid_pair.insert(map.0.clone(), map.1.clone());

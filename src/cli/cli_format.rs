@@ -17,37 +17,43 @@ pub struct ConfirmationResult {
 
 // category - action - condition
 pub enum MsgKind {
-    TargetChangePath(MsgArgs),
-    TargetChangeKeyword(MsgArgs),
+    ChangeTargetPath(MsgArgs),
+    ChangeTargetKeyword(MsgArgs),
     NoKeywordOrPathForReplace(MsgArgs),
-    FromPath(MsgArgs),
-    ExistingAlias(MsgArgs),
-    UpdatingAlias(MsgArgs),
-    UpdatedAlias(MsgArgs),
+    ImportFromPath(MsgArgs),
+    ImportYN,
+    ImportedRules,
+    KeywordAndTarget(MsgArgs),
+    AliasExisting(MsgArgs),
+    AliasUpdating(MsgArgs),
+    AliasUpdated(MsgArgs),
     DeleteRule(MsgArgs),
+    DeletedRule,
     NoRuleShowAvailable(MsgArgs),
     ListRule(MsgArgs),
     RuleInfo(MsgArgs),
+    RuleNonExistsForKeyword,
     AlreadyExistsTryEdit(MsgArgs),
     ActualPathNonExists(MsgArgs),
+    ActualPathWillBeCreated,
     PathNotProvided(MsgArgs),
-}
-
-pub enum ErrorKind {
-    InvalidAlias,
-    NotFoundAlias,
-    NotFoundRuleForPath,
-    PathShouldBeGiven,
+    AddedRule,
+    PathNonExistsCreating(MsgArgs),
+    DisplaySource(MsgArgs),
+    DisplayTarget(MsgArgs),
+    AlreadyExistsInTarget(MsgArgs),
+    NoItemsToMoveInSource,
+    SimpleDone,
 }
 
 pub fn msg_format(kind: MsgKind) -> String {
     match kind {
-        MsgKind::TargetChangePath(args) => {
+        MsgKind::ChangeTargetPath(args) => {
             format!(
         "{0} change target path '\x1b[4m{1}\x1b[0m\x1b[0m' -> '\x1b[4m{2}\x1b[0m\x1b[0m' for keyword '{3}'?",
         status_symbol(&YN), args.primary_path, args.secondary_path, args.primary_keyword)
         }
-        MsgKind::TargetChangeKeyword(args) => {
+        MsgKind::ChangeTargetKeyword(args) => {
             format!(
                 "{0} change keyword '{1}' -> '{2}'?",
                 status_symbol(&YN),
@@ -64,19 +70,31 @@ pub fn msg_format(kind: MsgKind) -> String {
                 args.secondary_path,
             )
         }
+        MsgKind::ActualPathWillBeCreated => {
+            "Note: the actual directory doesn't exist yet. it will be created later when the files are moved.".to_string()
+        }
         MsgKind::NoKeywordOrPathForReplace(args) => {
             format!("please add a new keyword or path for a replace.\nCURRENT:\n keyword - {},\n target - {}", args.primary_keyword, Utf8PathBuf::from(args.primary_path))
         }
-        MsgKind::FromPath(args) => {
+        MsgKind::ImportFromPath(args) => {
             format!("from \x1b[4m{}\x1b[0m\x1b[0m?", args.primary_path)
         }
-        MsgKind::ExistingAlias(args) => {
+        MsgKind::ImportYN => {
+            format!("{} do you want to import rules: ", status_symbol(&YN))
+        }
+        MsgKind::ImportedRules => {
+            "rules imported.".to_string()
+        }
+        MsgKind::AliasExisting(args) => {
             format!(
                 "{} '{}' is an existing alias for path '\x1b[4m{}\x1b[0m\x1b[0m'",
                 status_symbol(&Error),
                 args.primary_keyword,
                 args.primary_path
             )
+        }
+        MsgKind::KeywordAndTarget(args) => {
+            format!(" - keyword: {}, target path: \x1b[4m{}\x1b[0m\x1b[0m", args.primary_keyword, args.primary_path)
         }
         MsgKind::ListRule(args) => {
             format!("Keywords for current directory:\n{}", args.primary_keyword)
@@ -88,6 +106,9 @@ pub fn msg_format(kind: MsgKind) -> String {
                 args.primary_keyword,
                 args.primary_path
             )
+        }
+        MsgKind::DeletedRule => {
+            "deleted rule successfully.".to_string()
         }
         MsgKind::NoRuleShowAvailable(args) => {
             format!(
@@ -105,7 +126,7 @@ pub fn msg_format(kind: MsgKind) -> String {
             )
         }
 
-        MsgKind::UpdatingAlias(args) => {
+        MsgKind::AliasUpdating(args) => {
             format!(
                 "{} update alias '{}' -> '{}'?",
                 status_symbol(&YN),
@@ -113,7 +134,7 @@ pub fn msg_format(kind: MsgKind) -> String {
                 args.secondary_keyword
             )
         }
-        MsgKind::UpdatedAlias(args) => {
+        MsgKind::AliasUpdated(args) => {
             format!(
                 "{} updated alias: {} -> {}",
                 status_symbol(&Safe),
@@ -127,7 +148,42 @@ pub fn msg_format(kind: MsgKind) -> String {
         MsgKind::PathNotProvided(args) => {
             format!("{} target path is not provided. make a new target path to the keyword in the current directory? ({}{})",status_symbol(&YN), args.primary_path, args.primary_keyword)
         }
+        MsgKind::AddedRule => {
+            "rule added.".to_string()
+        }
+        MsgKind::RuleNonExistsForKeyword => {
+            "no such rule for the keyword".to_string()
+        }
+        MsgKind::PathNonExistsCreating(args) => {
+            format!(
+            " {} \x1b[0;33mtarget path '{}' doesn't exist. Creating the directory...\x1b[0m",
+            status_symbol(&Caution), args.primary_path)
+        }
+        MsgKind::DisplaySource(args) => {
+            format!("\nSOURCE: \x1b[4m{}\x1b[0m\x1b[0m", args.primary_path)
+        }
+        MsgKind::DisplayTarget(args) => {
+            format!("\r└→ TARGET: \x1b[4m{}\x1b[0m\x1b[0m ", args.primary_path)
+        }
+        MsgKind::AlreadyExistsInTarget(args) => {
+            format!("  {0} {1} {2} already exists in the target directory.", status_symbol(&Caution), args.secondary_keyword, args.primary_path)
+        }
+        MsgKind::NoItemsToMoveInSource => {
+            format!("{} No items to move in the source path.", status_symbol(&Safe))
+        }
+        MsgKind::SimpleDone => {
+            "\nDone".to_string()
+        }
     }
+}
+
+pub enum ErrorKind {
+    InvalidAlias,
+    NotFoundAlias,
+    NotFoundRuleForPath,
+    PathShouldBeGiven,
+    NoRuleForPath,
+    CreateTargetDirFail,
 }
 
 pub fn error_format(kind: ErrorKind) -> String {
@@ -141,5 +197,9 @@ pub fn error_format(kind: ErrorKind) -> String {
         ErrorKind::NotFoundAlias => "NOT FOUND: no rule for the alias found.".to_string(),
         ErrorKind::NotFoundRuleForPath => "NOT FOUND: no rule for the path found.".to_string(),
         ErrorKind::PathShouldBeGiven => "INVALID INPUT: target path should be given.".to_string(),
+        ErrorKind::NoRuleForPath => "NOT FOUND: no rule for the current path".to_string(),
+        ErrorKind::CreateTargetDirFail => {
+            "Error: failed to create target directory on disk.".to_string()
+        }
     }
 }
