@@ -43,17 +43,7 @@ impl DataManager {
             .to_string();
 
         match check_input(data, keyword_trimmed.clone(), target_trimmed.clone()) {
-            InputCase::PathExists => {
-                println!(
-                    "{}",
-                    msg_format(MsgKind::AlreadyExistsTryEdit(MsgArgs {
-                        primary_keyword: keyword,
-                        primary_path: target_path,
-                        ..Default::default()
-                    }),)
-                );
-                process::exit(1)
-            }
+            InputCase::PathExists => process::exit(1),
             InputCase::CurrentDir => {
                 let target_in_current_dir = format!(
                     "{}/{}",

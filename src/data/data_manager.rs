@@ -56,15 +56,6 @@ impl DataManager {
                         );
                     }
                     Ok(obj) => {
-                        println!(
-                            "{}",
-                            msg_format(MsgKind::RuleInfo(MsgArgs {
-                                primary_keyword: args.keyword.clone(),
-                                primary_path: args.primary_path.clone(),
-                                secondary_path: args.secondary_path.clone(),
-                                ..Default::default()
-                            }))
-                        );
                         self.add_rule_to_json(
                             obj,
                             args.secondary_path.to_string(),

@@ -20,8 +20,30 @@ pub fn check_input(d: &DataObject, k: String, p: String) -> InputCase {
     let target_in_current_dir = format!("{}/{}", current_dir_str, k);
 
     match d.targets.get(&k) {
-        Some(existings) if existings == &p || d.targets.contains_key(&k) => InputCase::PathExists,
-        _ if p.starts_with("./") => InputCase::CurrentDir,
+        Some(existings) if existings == &p || d.targets.contains_key(&k) => {
+            println!(
+                "{}",
+                msg_format(MsgKind::AlreadyExistsTryEdit(MsgArgs {
+                    primary_keyword: k,
+                    primary_path: p.to_string(),
+                    ..Default::default()
+                }),)
+            );
+            InputCase::PathExists
+        }
+        _ if p.starts_with('.') => {
+            println!(
+                "{}",
+                msg_format(MsgKind::RuleInfo(MsgArgs {
+                    primary_keyword: k,
+                    primary_path: current_dir_str.to_string(),
+                    secondary_path: target_in_current_dir,
+                    ..Default::default()
+                }),)
+            );
+            InputCase::CurrentDir
+        }
+
         _ if p.is_empty() => {
             match menu::get_yn_input(msg_format(MsgKind::PathNotProvided(MsgArgs {
                 primary_path: target_in_current_dir.clone(),
@@ -46,6 +68,17 @@ pub fn check_input(d: &DataObject, k: String, p: String) -> InputCase {
                 }
             }
         }
-        _ => InputCase::Normal,
+        _ => {
+            println!(
+                "{}",
+                msg_format(MsgKind::RuleInfo(MsgArgs {
+                    primary_keyword: k,
+                    primary_path: current_dir_str.to_string(),
+                    secondary_path: p,
+                    ..Default::default()
+                }))
+            );
+            InputCase::Normal
+        }
     }
 }
