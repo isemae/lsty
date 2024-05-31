@@ -133,36 +133,7 @@ impl DataManager {
             false
         };
 
-        if !replacement.is_empty() {
-            match (is_replacement_dir, is_trimmed_replacement_dir) {
-                (true, _) => ConfirmationResult {
-                    bool: true,
-                    message: msg_format(MsgKind::TargetChangePath(MsgArgs {
-                        primary_keyword: arg.clone(),
-                        primary_path: target.to_string(),
-                        secondary_path: replacement.clone(),
-                        ..Default::default()
-                    })),
-                },
-                (false, true) => ConfirmationResult {
-                    bool: true,
-                    message: msg_format(MsgKind::ActualPathNonExists(MsgArgs {
-                        primary_path: target.to_string(),
-                        primary_keyword: arg.clone(),
-                        secondary_path: replacement.clone(),
-                        ..Default::default()
-                    })),
-                },
-                _ => ConfirmationResult {
-                    bool: false,
-                    message: msg_format(MsgKind::TargetChangeKeyword(MsgArgs {
-                        primary_keyword: arg.clone(),
-                        secondary_keyword: replacement.clone(),
-                        ..Default::default()
-                    })),
-                },
-            }
-        } else {
+        if replacement.is_empty() {
             println!(
                 "{}",
                 msg_format(MsgKind::NoKeywordOrPathForReplace(MsgArgs {
@@ -172,6 +143,39 @@ impl DataManager {
                 }))
             );
             process::exit(1);
+        } else {
+            match (is_replacement_dir, is_trimmed_replacement_dir) {
+                // replacement is path
+                (true, _) => ConfirmationResult {
+                    bool: true,
+                    message: msg_format(MsgKind::TargetChangePath(MsgArgs {
+                        primary_keyword: arg.clone(),
+                        primary_path: target.to_string(),
+                        secondary_path: replacement.clone(),
+                        ..Default::default()
+                    })),
+                },
+                // replacement is not an existing path.
+                // the path will be created when moving entries
+                (false, true) => ConfirmationResult {
+                    bool: true,
+                    message: msg_format(MsgKind::ActualPathNonExists(MsgArgs {
+                        primary_path: target.to_string(),
+                        primary_keyword: arg.clone(),
+                        secondary_path: replacement.clone(),
+                        ..Default::default()
+                    })),
+                },
+                // replacement is keyword
+                _ => ConfirmationResult {
+                    bool: false,
+                    message: msg_format(MsgKind::TargetChangeKeyword(MsgArgs {
+                        primary_keyword: arg.clone(),
+                        secondary_keyword: replacement.clone(),
+                        ..Default::default()
+                    })),
+                },
+            }
         }
     }
 }
