@@ -290,21 +290,20 @@ impl DataManager {
                 }))
             );
             for entry in vec.clone() {
-                println!("{}", entry);
                 let new_entry = format!("{}/{}", target, entry);
                 let entry_symbol = menu::entry_symbol(&entry);
 
-                println!("{}", new_entry);
-
                 if !new_entry.is_empty() {
-                    match !vec.is_empty()
-                        && Path::new(&new_entry).exists()
-                        // && vec.iter().any(|e| e == &new_entry)
-                    {
+                    match !vec.is_empty() && Path::new(&new_entry).exists() {
                         true => {
-                            println!("{}", msg_format(MsgKind::AlreadyExistsInTarget(MsgArgs {
-                                secondary_keyword: entry_symbol, primary_path: entry, ..Default::default()
-                            })));
+                            println!(
+                                "{}",
+                                msg_format(MsgKind::AlreadyExistsInTarget(MsgArgs {
+                                    secondary_keyword: entry_symbol,
+                                    primary_path: entry,
+                                    ..Default::default()
+                                }))
+                            );
                             continue;
                         }
                         false => {
@@ -316,30 +315,34 @@ impl DataManager {
                     }
                 }
             }
+            println!()
         }
         if moved_count == 0 {
             println!("{}", msg_format(NoItemsToMoveInSource));
         } else {
             println!("{}", msg_format(SimpleDone))
         }
-
         Ok(())
     }
 
     pub fn move_entry(&self, entry_path: &String, new_entry: String) {
         match PathBuf::from(entry_path.clone()).is_dir() {
             true => {
-                fs::create_dir_all(&new_entry).expect("");
-                self.copy_dir(
-                    &PathBuf::from(entry_path.clone()),
-                    &PathBuf::from(&new_entry),
-                )
-                .expect("");
-                fs::remove_dir_all(entry_path).expect("");
+                if fs::create_dir_all(&new_entry).is_ok()
+                    && self
+                        .copy_dir(
+                            &PathBuf::from(entry_path.clone()),
+                            &PathBuf::from(&new_entry),
+                        )
+                        .is_ok()
+                {
+                    let _ = fs::remove_dir_all(entry_path);
+                };
             }
             false => {
-                fs::copy(entry_path, new_entry).expect("");
-                fs::remove_file(entry_path).expect("");
+                if fs::copy(entry_path, new_entry).is_ok() {
+                    let _ = fs::remove_file(entry_path);
+                };
             }
         }
     }

@@ -74,7 +74,7 @@ pub fn msg_format(kind: MsgKind) -> String {
             "Note: the actual directory doesn't exist yet. it will be created later when the files are moved.".to_string()
         }
         MsgKind::NoKeywordOrPathForReplace(args) => {
-            format!("please add a new keyword or path for a replace.\nCURRENT:\n keyword - {},\n target - {}", args.primary_keyword, Utf8PathBuf::from(args.primary_path))
+            format!("please add a new keyword or path for replacement.\nCURRENT:\n keyword - {},\n target - {}", args.primary_keyword, Utf8PathBuf::from(args.primary_path))
         }
         MsgKind::ImportFromPath(args) => {
             format!("from \x1b[4m{}\x1b[0m\x1b[0m?", args.primary_path)
@@ -146,7 +146,7 @@ pub fn msg_format(kind: MsgKind) -> String {
             format!("rule already exists.\nNote: Try \"\x1b[4mlsty edit {0} {1}\x1b[0m\x1b[0m\" or \"\x1b[4mlsty -e {0} {1}\x1b[0m\x1b[0m\" to edit the path.", args.primary_keyword, args.primary_path)
         }
         MsgKind::PathNotProvided(args) => {
-            format!("{} target path is not provided. make a new target path to the keyword in the current directory? ({}{})",status_symbol(&YN), args.primary_path, args.primary_keyword)
+            format!("{} target path not provided. make a new target path to the keyword in the current directory? ({}{})",status_symbol(&YN), args.primary_path, args.primary_keyword)
         }
         MsgKind::AddedRule => {
             "rule added.".to_string()
@@ -166,13 +166,13 @@ pub fn msg_format(kind: MsgKind) -> String {
             format!("\r└→ TARGET: \x1b[4m{}\x1b[0m\x1b[0m ", args.primary_path)
         }
         MsgKind::AlreadyExistsInTarget(args) => {
-            format!("  {0} {1} {2} already exists in the target directory.", status_symbol(&Caution), args.secondary_keyword, args.primary_path)
+            format!("  {0} {1} '{2}' \x1b[4malready exists.\x1b[0m\x1b[0m", status_symbol(&Caution), args.secondary_keyword, args.primary_path)
         }
         MsgKind::NoItemsToMoveInSource => {
-            format!("{} No items to move in the source path.", status_symbol(&Safe))
+            format!("{} No items to move.", status_symbol(&Safe))
         }
         MsgKind::SimpleDone => {
-            "\nDone".to_string()
+            "Done.".to_string()
         }
     }
 }
