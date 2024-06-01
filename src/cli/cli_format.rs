@@ -156,7 +156,7 @@ pub fn msg_format(kind: MsgKind) -> String {
         }
         MsgKind::PathNonExistsCreating(args) => {
             format!(
-            " {} \x1b[0;33mtarget path '{}' doesn't exist. Creating the directory...\x1b[0m",
+            "{} \x1b[0;33mtarget path '{}' doesn't exist. Creating the directory...\x1b[0m",
             status_symbol(&Caution), args.primary_path)
         }
         MsgKind::DisplaySource(args) => {

@@ -282,6 +282,7 @@ impl DataManager {
             }))
         );
         for (target, vec) in entries_map {
+            self.validate_pair(target.as_str()).unwrap();
             println!(
                 "{}",
                 msg_format(MsgKind::DisplayTarget(MsgArgs {
@@ -307,7 +308,6 @@ impl DataManager {
                             continue;
                         }
                         false => {
-                            self.validate_pair(&data.targets).unwrap();
                             self.move_entry(&entry, new_entry);
                             println!("  {0} {1} {2}", status_symbol(&Safe), entry_symbol, entry);
                             moved_count += 1;
@@ -376,26 +376,21 @@ impl DataManager {
 
 // Pre-rename(move) processings
 impl DataManager {
-    fn validate_pair(&self, targets: &HashMap<String, String>) -> Option<HashMap<String, String>> {
-        let mut valid_pair = HashMap::new();
-
-        for map in targets.iter() {
-            if !PathBuf::from(map.1).exists() {
-                eprintln!(
-                    "{}",
-                    msg_format(MsgKind::PathNonExistsCreating(MsgArgs {
-                        primary_path: map.1.to_string(),
-                        ..Default::default()
-                    }))
-                );
-                fs::create_dir_all(map.1)
-                    .unwrap_or_else(|_| panic!("{}", error_format(ErrorKind::CreateTargetDirFail)));
-                valid_pair.insert(map.0.clone(), map.1.clone());
-            } else {
-                valid_pair.insert(map.0.clone(), map.1.clone());
-            }
+    fn validate_pair(&self, target: &str) -> Option<String> {
+        let mut valid_target = "";
+        if !PathBuf::from(target).exists() {
+            valid_target = target;
+            eprintln!(
+                "{}",
+                msg_format(MsgKind::PathNonExistsCreating(MsgArgs {
+                    primary_path: valid_target.to_string(),
+                    ..Default::default()
+                }))
+            );
+            fs::create_dir_all(valid_target)
+                .unwrap_or_else(|_| panic!("{}", error_format(ErrorKind::CreateTargetDirFail)));
         }
-        Some(valid_pair)
+        Some(valid_target.to_string())
     }
 
     pub fn scan_current_path(
