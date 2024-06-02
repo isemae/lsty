@@ -1,7 +1,5 @@
 # lsty.rs
-<img src="https://github.com/isemae/lsty/assets/55517023/2a227eb5-dff4-44a3-9c8d-934fd7d3fc66" height="250">
-
-
+<img src="https://github.com/isemae/lsty/assets/55517023/aac9dba7-00bc-4a2e-95d9-dc0efe9a6bce" height="250">
 
 ### No more messy download folder!
 
