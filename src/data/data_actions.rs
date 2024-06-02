@@ -203,7 +203,7 @@ impl DataManager {
             .find(|obj| obj.source == import_path || obj.alias == alias && !alias.is_empty())
         {
             if import_path.is_empty() {
-                import_path = data_map.source.clone();
+                import_path.clone_from(&data_map.source);
             }
 
             let targets = data_map.targets.clone();

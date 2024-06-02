@@ -17,6 +17,3 @@ strum = "0.26.2"
 strum_macros = "0.26.2"
 symlink = "0.1.0"
 unicode-normalization = "0.1.23"
-
-[target.x86_64-unknown-linux-gnu]
-openssl = { version = "0.9.88", features = ["vendored"] }

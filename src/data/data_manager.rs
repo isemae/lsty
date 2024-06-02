@@ -70,7 +70,7 @@ impl DataManager {
                     eprintln!("{}", e)
                 }
                 Ok(obj) => {
-                    if obj.targets.get(&args.keyword).is_some() {
+                    if obj.targets.contains_key(&args.keyword) {
                         self.remove_rule_from_json(obj, args.keyword.as_str())?;
                         println!("{}", msg_format(MsgKind::DeletedRule));
                         json.save_json_data(&data)?;
