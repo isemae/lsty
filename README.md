@@ -6,10 +6,17 @@
 ### No more messy download folder!
 
 
-User-rule-based file manager.
+A Keyword-based file manager.
 
 
 See Commands below for more info!
+
+
+### !USE AT YOUR OWN RISK!
+This binary is not guaranteed to work on all environments, operating systems or machines.
+Therefore it can produce any unexpected or destructive results. Please use it at your own discretion.
+
+
 
 ## Installation
 Download binary from releases and move it to your user binary or system binary path.
