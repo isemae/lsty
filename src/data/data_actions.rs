@@ -293,8 +293,9 @@ impl DataManager {
             for entry in vec.clone() {
                 let new_entry = format!("{}/{}", target, entry);
                 let entry_symbol = menu::entry_symbol(&entry);
-
-                if !new_entry.is_empty() {
+                let new_entry_vec: Vec<&str> = target.split(|c| c == '/' || c == '\\').collect();
+                let is_entry_self = new_entry_vec.last().unwrap_or(&"") == &entry;
+                if !new_entry.is_empty() && !is_entry_self {
                     match !vec.is_empty() && Path::new(&new_entry).exists() {
                         true => {
                             println!(
@@ -308,7 +309,7 @@ impl DataManager {
                             continue;
                         }
                         false => {
-                            self.move_entry(&entry, new_entry);
+                            self.move_entry(&entry, &new_entry);
                             println!("  {0} {1} {2}", status_symbol(&Safe), entry_symbol, entry);
                             moved_count += 1;
                         }
@@ -325,15 +326,12 @@ impl DataManager {
         Ok(())
     }
 
-    pub fn move_entry(&self, entry_path: &String, new_entry: String) {
-        match PathBuf::from(entry_path.clone()).is_dir() {
+    pub fn move_entry(&self, entry_path: &str, new_entry: &str) {
+        match PathBuf::from(entry_path).is_dir() {
             true => {
-                if fs::create_dir_all(&new_entry).is_ok()
+                if fs::create_dir_all(new_entry).is_ok()
                     && self
-                        .copy_dir(
-                            &PathBuf::from(entry_path.clone()),
-                            &PathBuf::from(&new_entry),
-                        )
+                        .copy_dir(&PathBuf::from(entry_path), &PathBuf::from(&new_entry))
                         .is_ok()
                 {
                     let _ = fs::remove_dir_all(entry_path);
