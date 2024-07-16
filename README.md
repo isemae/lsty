@@ -71,24 +71,4 @@ lsty import(-i) ALIAS_OR_PATH
 
 ---
 
-
-<details markdown="1">
-<summary>etc</summary> 
-
-
-## 'nah why dont ya just make batch files'?
-but datz no COOL
-
-
-<img width="800" alt="took_2_yrs_20240331023409" src="https://github.com/isemae/lsty/assets/55517023/fec0deb1-ceb1-4db0-ab4e-edcd8aaaeb2b">
-
-and not forgetting a goal is COOL
-
-## GUI?
-
-not planned for the moment but
-
-
-<img src="https://github.com/isemae/lusty.rs/assets/55517023/a9d92a2d-8e9e-49cd-9921-03baa85ef800" alt="fl_or_tr" width="500">
-
 </details>
