@@ -44,12 +44,9 @@ impl DataManager {
         match check_input(data, keyword_trimmed.clone(), target_trimmed.clone()) {
             InputCase::PathExists => process::exit(1),
             InputCase::CurrentDir => {
-                let target_in_current_dir = format!(
-                    "{}/{}",
-                    current_dir_str,
-                    target_trimmed.trim_start_matches("./")
-                );
-                data.targets.insert(keyword_trimmed, target_in_current_dir);
+                let target_in_current_dir = format!("{}/{}", current_dir_str, keyword_trimmed);
+                data.targets
+                    .insert(keyword_trimmed, target_in_current_dir.clone());
                 println!("{}", msg_format(MsgKind::AddedRule));
                 println!("{}", msg_format(MsgKind::ActualPathWillBeCreated));
             }

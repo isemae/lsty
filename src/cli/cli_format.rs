@@ -146,7 +146,7 @@ pub fn msg_format(kind: MsgKind) -> String {
             format!("rule already exists.\nNote: Try \"\x1b[4mlsty edit {0} {1}\x1b[0m\x1b[0m\" or \"\x1b[4mlsty -e {0} {1}\x1b[0m\x1b[0m\" to edit the path.", args.primary_keyword, args.primary_path)
         }
         MsgKind::PathNotProvided(args) => {
-            format!("{} target path not provided. make a new target path to the keyword in the current directory? ({}{})",status_symbol(&YN), args.primary_path, args.primary_keyword)
+            format!("{} target path not provided. make a new target path to the keyword in the current directory? ({})",status_symbol(&YN), args.primary_path)
         }
         MsgKind::AddedRule => {
             "rule added.".to_string()
