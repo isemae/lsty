@@ -151,9 +151,14 @@ impl DataManager {
                 }
                 Ok(obj) => {
                     let targets = &obj.targets;
-                    if targets.get(&args.keyword).is_some() {
+                    let old = targets.get(&args.keyword).cloned();
+                    if let Some(old_path) = old {
                         self.edit_rule(obj, args.keyword.clone(), args.secondary_path.clone());
                         json.save_json_data(&data).expect("");
+
+                        if Utf8PathBuf::from(&old_path).is_dir() {
+                            self.move_entry(&old_path, &args.secondary_path)
+                        }
                     } else {
                         let pairs = self.handle_pairs_list(targets);
                         return Err(io::Error::new(
