@@ -293,9 +293,14 @@ impl DataManager {
             for entry in vec.clone() {
                 let new_entry = format!("{}/{}", target, entry);
                 let entry_symbol = menu::entry_symbol(&entry);
-                let new_entry_vec: Vec<&str> = target.split(|c| c == '/' || c == '\\').collect();
+                let new_entry_vec: Vec<&str> = target
+                    .trim_end_matches(|c| c == '/' || c == '\\')
+                    .split(|c| c == '/' || c == '\\')
+                    .collect();
                 let is_entry_self = new_entry_vec.last().unwrap_or(&"") == &entry;
-                if !new_entry.is_empty() && !is_entry_self {
+
+                if new_entry.is_empty() && is_entry_self {
+                } else {
                     match !vec.is_empty() && Path::new(&new_entry).exists() {
                         true => {
                             println!(
